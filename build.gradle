@@ -10,18 +10,30 @@ repositories {
 }
 
 dependencies {
+    // for scraping hitparade.ch
     implementation 'net.sourceforge.htmlunit:htmlunit:2.62.0'
 
+    // lombok
     compileOnly 'org.projectlombok:lombok:1.18.24'
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
 
     testCompileOnly 'org.projectlombok:lombok:1.18.24'
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.24'
 
+    // spotify api
+    implementation "se.michaelthelin.spotify:spotify-web-api-java:7.1.0"
+    implementation "com.sparkjava:spark-core:2.9.3"
+
+    // unit tests
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 }
 
 test {
     useJUnitPlatform()
+}
+
+tasks.withType(JavaExec).configureEach {
+    it.systemProperty 'spotify.client_id', System.getProperty('spotify.client_id')
+    it.systemProperty 'spotify.client_secret', System.getProperty('spotify.client_secret')
 }
