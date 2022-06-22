@@ -3,6 +3,7 @@ package ch.simschla.swisstophits.spotify.auth;
 import lombok.NonNull;
 import org.apache.hc.core5.http.ParseException;
 import se.michaelthelin.spotify.SpotifyApi;
+import se.michaelthelin.spotify.enums.AuthorizationScope;
 import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
 import se.michaelthelin.spotify.model_objects.credentials.AuthorizationCodeCredentials;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeUriRequest;
@@ -88,7 +89,9 @@ public class SpotifyAuth {
     }
 
     private String requestCodeAuthorizedByUser(SpotifyApi spotifyApi, String codeChallenge) throws IOException, InterruptedException {
-        AuthorizationCodeUriRequest authorizationCodeUriRequest = spotifyApi.authorizationCodePKCEUri(codeChallenge).build();
+        AuthorizationCodeUriRequest authorizationCodeUriRequest = spotifyApi.authorizationCodePKCEUri(codeChallenge)
+                .scope(AuthorizationScope.PLAYLIST_MODIFY_PUBLIC)
+                .build();
 
         URI uri = authorizationCodeUriRequest.execute();
 
@@ -126,6 +129,7 @@ public class SpotifyAuth {
 
         SpotifyAuth auth = new SpotifyAuth();
         auth.authorized(spotifyApi);
+
 
         System.out.println("accessToken: " + auth.authPersist.accessToken());
 

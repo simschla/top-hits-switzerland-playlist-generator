@@ -11,27 +11,29 @@ import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlDivision;
 import lombok.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
 import java.util.List;
 
 public class ChartSongsScraper {
 
-    private final List<Integer> yearsToFetch;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChartSongsScraper.class);
 
-    public ChartSongsScraper(@NonNull List<Integer> yearsToFetch) {
-        this.yearsToFetch = yearsToFetch;
+    @NonNull
+    private final Integer year;
+
+    public ChartSongsScraper(@NonNull Integer year) {
+        this.year = year;
     }
 
-    public List<ChartInfo> fetchChartInfos() {
+    public ChartInfo fetchChartInfo() {
         try (WebClient webClient = createWebClient()) {
-            return yearsToFetch.stream()
-                    .map(year -> this.fetchChartInfo(webClient, year))
-                    .toList();
+            return fetchChartInfo(webClient);
         }
     }
 
-    private ChartInfo fetchChartInfo(WebClient webClient, Integer year) {
+    private ChartInfo fetchChartInfo(WebClient webClient) {
 
         ChartInfoBuilder chartInfoBuilder = ChartInfo.builder()
                 .chartYear(year);
@@ -45,7 +47,7 @@ public class ChartSongsScraper {
         }
 
         ChartInfo chartInfo = chartInfoBuilder.build();
-        System.out.println(chartInfo);
+        LOGGER.debug("Found scraped info for year {}: {}", year, chartInfo);
         return chartInfo;
     }
 
@@ -80,6 +82,6 @@ public class ChartSongsScraper {
 
 
     public static void main(String[] args) {
-        new ChartSongsScraper(Collections.singletonList(1994)).fetchChartInfos();
+        new ChartSongsScraper(1994).fetchChartInfo();
     }
 }
