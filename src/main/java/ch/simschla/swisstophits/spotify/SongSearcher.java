@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -51,6 +52,9 @@ public class SongSearcher {
                         songInfo.getArtists().stream()/*,
                         Stream.of(String.valueOf(songInfo.getChartYear()))*/)
                 .flatMap(s -> s)
+                .map(String::trim)
+                .map(s -> "".equals(s) ? null : s)
+                .filter(Objects::nonNull)
 //                .map(String::toLowerCase)
                 .collect(Collectors.joining(" "));
     }

@@ -17,10 +17,9 @@ import se.michaelthelin.spotify.model_objects.specification.PlaylistTrack;
 import se.michaelthelin.spotify.model_objects.specification.Track;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class SongManager {
 
@@ -78,10 +77,70 @@ public class SongManager {
                 LOGGER.warn("Could not find any track matching {} -- skipping.", chartSong);
                 continue;
             }
-            final Track track = tracks.get(0);
+
+            final Track track = selectTrack(chartSong, tracks);
+            if (track == null) {
+                LOGGER.warn("Could not select matching tracking for {}. Available: {}", chartSong, tracks);
+                continue;
+            }
             LOGGER.info("Using {} for {}.", track, chartSong);
+            LOGGER.debug("First 5: {}", tracks.subList(0, Math.min(5, tracks.size())).stream().map(t -> "\n- " + t).collect(Collectors.joining("\n")));
             foundTracks.add(track);
         }
+    }
+
+    private Track selectTrack(SongInfo chartSong, List<Track> tracks) {
+        // first check if we have a one2one match
+        if (tracks.get(0).getName().equals(chartSong.getSong())) {
+            return tracks.get(0);
+        }
+        // try to find a name match based on popularity
+        Optional<Track> found = tracks.stream()
+                .filter(t -> !matchesKaraoke(chartSong, t))
+                .filter(t -> songNamesMatch(chartSong, t))
+                .filter(t -> artistNamesMatch(chartSong, t))
+                .sorted(Comparator
+                        .comparingInt(Track::getPopularity).reversed()
+                        .thenComparingInt(t -> chartSong.getChartYear() - Integer.parseInt(t.getAlbum().getReleaseDate().substring(0, 4)))
+                        .thenComparingInt((Track track) -> track.getName().contains("Radio Edit") || track.getName().contains("Short Version") || track.getName().contains("Single Version") ? -11 : 1))
+                .findFirst();
+        if (found.isPresent()) {
+            return found.get();
+        }
+
+
+        return null;
+    }
+
+    private boolean matchesKaraoke(SongInfo chartSong, Track t) {
+        if (chartSong.getSong().toLowerCase().contains("karaoke")) {
+            return false;
+        }
+        if (chartSong.getArtists().stream().anyMatch(s -> s.toLowerCase().contains("karaoke"))) {
+            return false;
+        }
+        return t.getName().toLowerCase().contains("karaoke") || t.getAlbum().getName().contains("karaoke") || Arrays.stream(t.getArtists()).anyMatch(a -> a.getName().toLowerCase().contains("karaoke"));
+    }
+    private boolean songNamesMatch(SongInfo chartSong, Track t) {
+        boolean hasSameWords = t.getName().toLowerCase().replaceAll("[^a-z0-9]", "").contains(chartSong.getSong().toLowerCase().replaceAll("[^a-z0-9]", ""));
+        if (hasSameWords) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean artistNamesMatch(SongInfo chartSong, Track t) {
+        String trackArtists = Arrays.stream(t.getArtists()).map(s -> s.getName().toLowerCase().replaceAll("[^a-z0-9]", "")).collect(Collectors.joining(" "));
+        for (String artist : chartSong.getArtists()) {
+            List<String> chartArtists = Arrays.stream(artist.toLowerCase().split(" ")).map(s -> s.replaceAll("[^a-z0-9]", "")).toList();
+            for (String chartArtist : chartArtists) {
+                if (!trackArtists.contains(chartArtist)) {
+                    return false;
+                }
+
+            }
+        }
+        return true;
     }
 
     private List<PlaylistTrack> fetchAllTracks() throws IOException, ParseException, SpotifyWebApiException {
