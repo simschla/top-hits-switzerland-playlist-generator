@@ -1,16 +1,24 @@
 package ch.simschla.swisstophits.spotify;
 
 import ch.simschla.swisstophits.model.SongInfo;
+import lombok.AccessLevel;
+import lombok.Data;
 import lombok.NonNull;
+import lombok.Setter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.michaelthelin.spotify.model_objects.specification.Track;
 
 import java.text.Normalizer;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.function.Predicate.not;
 
 public class SongMatcher {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SongMatcher.class);
 
     @NonNull
     private final SongInfo songToLookFor;
@@ -21,29 +29,16 @@ public class SongMatcher {
 
 
     public Optional<Track> selectBestMatchingTrack(List<Track> tracks) {
-        // first remove blocklist
-        List<Track> welcomedTracks = tracks.stream()
-                .filter(not(this::isBlocklisted))
-                .toList();
 
-        return findExactMatch(welcomedTracks)
-                .or(() -> findContainedTitleAndSimilarArtists(welcomedTracks));
-    }
-
-    private Optional<Track> findExactMatch(List<Track> tracks) {
-        return tracks.stream()
-                .filter(track -> track.getName().equalsIgnoreCase(songToLookFor.getSong()))
-                .filter(this::allArtistNamesAreContainedIn)
-                .filter(track -> releaseDelta(track.getAlbum().getReleaseDate()) <= 1)
-                .findFirst();
-    }
-
-    private Optional<Track> findContainedTitleAndSimilarArtists(List<Track> tracks) {
-        return tracks.stream()
-                .filter(track -> songNameIsContainedIn(track))
-                .filter(track -> anyArtistNameIsContainedIn(track))
-                .sorted(new TrackRanker())
-                .findFirst();
+        RatingCalculator ratingCalculator = new RatingCalculator(tracks);
+        List<Rating> ratings = ratingCalculator.sortedRatings(15d);
+        if (ratings.isEmpty()) {
+            LOGGER.debug("--> no match in limit. Max 5: {}", ratingCalculator.sortedRatings(0d).stream().limit(5).map(Object::toString).collect(Collectors.joining("\n\n")));
+            return Optional.empty();
+        }
+        LOGGER.info("Rating of {} for {}.", ratings.get(0), songToLookFor.toShortDesc());
+        LOGGER.debug("--> First 5 were: {}", ratingCalculator.sortedRatings(0d).stream().limit(5).map(Object::toString).collect(Collectors.joining("\n\n")));
+        return Optional.of(ratings.get(0).getTrack());
     }
 
     private boolean isBlocklisted(Track track) {
@@ -78,8 +73,7 @@ public class SongMatcher {
         String trackSongName = simplified(t.getName());
         String songToLookForName = simplified(songToLookFor.getSong());
         return containsWord(trackSongName, songToLookForName) ||
-                containsWord(songToLookForName, trackSongName) ||
-                songNamePartsAreContainedIn(t);
+                containsWord(songToLookForName, trackSongName);
     }
 
     private boolean containsWord(String s, String word) {
@@ -184,90 +178,144 @@ public class SongMatcher {
                 .collect(Collectors.joining(" "));
     }
 
-    private class TrackRanker implements Comparator<Track> {
-        @Override
-        public int compare(Track o1, Track o2) {
-            if (o1 == null && o2 == null) {
-                return 0;
-            }
-            if (o1 == null) {
-                return +1;
-            }
-            if (o2 == null) {
-                return -1;
-            }
-
-            // song name matches better
-            if (songNameIsContainedIn(o1) && !songNameIsContainedIn(o2)) {
-                return -1;
-            }
-            if (!songNameIsContainedIn(o1) && songNameIsContainedIn(o2)) {
-                return +1;
-            }
-
-            // artists are perfect match
-            if (allArtistNamesAreContainedIn(o1) && !allArtistNamesAreContainedIn(o2)) {
-                return -1;
-            }
-            if (!allArtistNamesAreContainedIn(o1) && allArtistNamesAreContainedIn(o2)) {
-                return +1;
-            }
-
-            // prefer non-remixes
-            if (!isRemix(o1) && isRemix(o2)) {
-                return -1;
-            }
-            if (isRemix(o1) && !isRemix(o2)) {
-                return +1;
-            }
-
-            // prefer non-live
-            if (!isLive(o1) && isLive(o2)) {
-                return -1;
-            }
-            if (isLive(o1) && !isLive(o2)) {
-                return +1;
-            }
-
-            // most populars first
-            if (o1.getPopularity() > o2.getPopularity()) {
-                return -1;
-            }
-            if (o1.getPopularity() < o2.getPopularity()) {
-                return +1;
-            }
-
-            // then the one with closest release date
-            final int releaseDelta1 = releaseDelta(o1.getAlbum().getReleaseDate());
-            final int releaseDelta2 = releaseDelta(o2.getAlbum().getReleaseDate());
-
-            if (releaseDelta1 < releaseDelta2) {
-                return -1;
-            }
-            if (releaseDelta1 > releaseDelta2) {
-                return +1;
-            }
-
-            // then pick shortest (to get radio edits / single versions before long/remixed versions)
-            if (o1.getDurationMs() < o2.getDurationMs()) {
-                return -1;
-            }
-            if (o2.getDurationMs() > o2.getDurationMs()) {
-                return +1;
-            }
-
-//                                    .comparingInt(Track::getPopularity).reversed()
-//                    .thenComparingInt(t -> songToLookFor.getChartYear() - Integer.parseInt(t.getAlbum().getReleaseDate().substring(0, 4)))
-//                    .thenComparingInt((Track track) -> track.getName().contains("Radio Edit") || track.getName().contains("Short Version") || track.getName().contains("Single Version") ? -11 : 1))
-            return 0;
-        }
-    }
-
     private int releaseDelta(String releaseDate) {
         try {
             return Integer.parseInt(releaseDate.substring(0, 4)) - songToLookFor.getChartYear();
         } catch (NumberFormatException e) {
             return 0;
+        }
+    }
+
+    private class RatingCalculator {
+
+        private final Map<Track, Rating> ratings = new HashMap<>();
+        private final List<Track> allTracks;
+
+        public RatingCalculator(List<Track> allTracks) {
+            this.allTracks = allTracks;
+            rateAllTracks();
+        }
+
+        private void rateAllTracks() {
+            for (Track track : allTracks) {
+                rate(track);
+            }
+            Collection<Rating> allRatings = this.ratings.values();
+            allRatings.forEach(rating -> rating.calculateScore(allRatings));
+        }
+
+        private void rate(Track track) {
+            Rating rating = new Rating(track);
+
+            rating.setBlocked(isBlocklisted(track));
+            if (rating.isBlocked()) {
+                ratings.put(track, rating);
+                return; //nothing else to do
+            }
+
+            if (songNameIsContainedIn(track)) {
+                rating.setSongNameScore(10d);
+            } else if (songNamePartsAreContainedIn(track)) {
+                rating.setSongNameScore(5d);
+            } else {
+                rating.setSongNameScore(-5d);
+            }
+
+            if (songToLookFor.getArtists().size() == track.getArtists().length) {
+                rating.setArtistCountScore(2d);
+            }
+            if (allArtistNamesAreContainedIn(track)) {
+                rating.setArtistNamesScore(10d);
+            } else if (anyArtistNameIsContainedIn(track)) {
+                rating.setArtistNamesScore(5d);
+            } else {
+                rating.setArtistNamesScore(-5d);
+            }
+
+            rating.setPopularityScore(track.getPopularity() * 5d / allTracks.stream().map(Track::getPopularity).max(Comparator.naturalOrder()).orElseThrow());
+
+            // shorter is better, reduce to parts of a minute
+            rating.setDurationScore(0.5d * ((allTracks.stream().map(Track::getDurationMs).max(Comparator.naturalOrder()).orElseThrow() - track.getDurationMs()) / 1000d / 60d));
+
+            if (isLive(track)) {
+                rating.setLiveScore(1.0d);
+            }
+            if (isRemix(track)) {
+                rating.setLiveScore(1.0d);
+            }
+
+            // below zero here means better, but to far away from chart year is probably remix or re-recorded or birthday version
+            int deltaYears = releaseDelta(track.getAlbum().getReleaseDate());
+            if (deltaYears == 1 || deltaYears == 0 || deltaYears == -1) {
+                rating.setReleaseDateScore(5d);
+            } else if (deltaYears > -4 && deltaYears < -1) {
+                rating.setReleaseDateScore(2.5d);
+            } else if (Math.abs(deltaYears) > 10) {
+                rating.setReleaseDateScore(-1d);
+            }
+
+            ratings.put(track, rating);
+        }
+
+        public List<Rating> sortedRatings(double minVal) {
+            return ratings
+                    .values()
+                    .stream()
+                    .sorted(Comparator.comparing(Rating::getCalculatedScore).reversed())
+                    .filter(r -> r.getCalculatedScore() >= minVal)
+                    .toList();
+        }
+    }
+
+
+    @Data
+    private static class Rating {
+
+        @Setter(value = AccessLevel.PRIVATE)
+        Double calculatedScore;
+
+        boolean blocked;
+
+        double songNameScore;
+
+        double artistCountScore;
+
+        double artistNamesScore;
+
+        double remixScore;
+
+        double liveScore;
+
+        double popularityScore;
+
+        double releaseDateScore;
+
+        double durationScore;
+
+        @NonNull
+        final Track track;
+
+        private void calculateScore(Collection<Rating> all) {
+            if (calculatedScore != null) {
+                return; // already done
+            }
+
+            if (blocked) {
+                calculatedScore = Double.MIN_VALUE;
+                return;
+            }
+
+            calculatedScore = Stream.of(
+                            getSongNameScore(),
+                            getArtistNamesScore(),
+                            getArtistCountScore(),
+                            getRemixScore(),
+                            getLiveScore(),
+                            getPopularityScore(),
+                            getReleaseDateScore(),
+                            getDurationScore()
+                    ).reduce(Double::sum)
+                    .orElseThrow();
         }
     }
 }
