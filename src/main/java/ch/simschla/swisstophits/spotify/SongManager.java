@@ -113,12 +113,14 @@ public class SongManager {
 
 
         // print header
-        int tableLength = maxLengthMatch + 2 + maxLengthSong + 2 + 3;
+        int tableLength = 6 /* pos */ + maxLengthMatch + 2 + 3 /* sep */ + maxLengthSong + 2;
 
         final StringBuilder table = new StringBuilder();
         table.append(repeat("=", tableLength))
                 .append("\n");
         table.append("| ")
+                .append(String.format("%3s", "#"))
+                .append(" | ")
                 .append(String.format("%-" + maxLengthSong + "s", "Charts-Info"))
                 .append(" | ")
                 .append(String.format("%-" + maxLengthMatch + "s", "Spotify Match"))
@@ -126,8 +128,11 @@ public class SongManager {
         table.append(repeat("=", tableLength))
                 .append("\n");
 
+        int pos = 1;
         for (Map.Entry<String, String> entry : matchResults.entrySet()) {
             table.append("| ")
+                    .append(String.format("%3d", pos++))
+                    .append(" | ")
                     .append(String.format("%-" + maxLengthSong + "s", entry.getKey()))
                     .append(" | ")
                     .append(String.format("%-" + maxLengthMatch + "s", entry.getValue()))
@@ -189,6 +194,10 @@ public class SongManager {
     }
 
     private List<PlaylistTrack> fetchAllTracks() throws IOException, ParseException, SpotifyWebApiException {
+        if (TopHitsGeneratorMode.INSTANCE.dryRun()) {
+            LOGGER.info("DRY-RUN. Not fetching current state from playlist {}", playlist.getName());
+            return Collections.emptyList();
+        }
         final int fetchSize = 50;
         int offset = 0;
         final List<PlaylistTrack> tracks = new ArrayList<>(fetchSize);

@@ -4,10 +4,8 @@ import ch.simschla.swisstophits.model.SongInfo;
 import lombok.NonNull;
 import se.michaelthelin.spotify.model_objects.specification.Track;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.text.Normalizer;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.function.Predicate.not;
@@ -42,19 +40,19 @@ public class SongMatcher {
     private Optional<Track> findContainedTitleAndSimilarArtists(List<Track> tracks) {
         return tracks.stream()
                 .filter(track -> songNameIsContainedIn(track))
-                .filter(track -> allArtistNamesAreContainedIn(track))
+                .filter(track -> anyArtistNameIsContainedIn(track))
                 .min(new TrackRanker());
     }
 
     private boolean isBlocklisted(Track track) {
-        return matchesKaraoke(track);
+        return matchesKaraoke(track) || isLive(track) /*|| isRemix(track)*/;
     }
 
     private boolean matchesKaraoke(Track t) {
         if (simplified(songToLookFor.getSong()).contains("karaoke")) {
             return false;
         }
-        if (songToLookFor.getArtists().stream().map(SongMatcher::simplified).anyMatch(s -> s.contains("karaoke"))) {
+        if (songToLookFor.getArtists().stream().map(this::simplified).anyMatch(s -> s.contains("karaoke"))) {
             return false;
         }
         return simplified(t.getName()).contains("karaoke")
@@ -62,8 +60,28 @@ public class SongMatcher {
                 || Arrays.stream(t.getArtists()).map(artist -> simplified(artist.getName())).anyMatch(a -> a.contains("karaoke"));
     }
 
+    private boolean isRemix(Track track) {
+        return trackNameContainsButNotSongToLookFor(track, "mix") || trackNameContainsButNotSongToLookFor(track, "dub");
+    }
+
+    private boolean trackNameContainsButNotSongToLookFor(Track track, String searchString) {
+        return track.getName().toLowerCase().contains(searchString.toLowerCase()) && !songToLookFor.getSong().toLowerCase().contains(searchString.toLowerCase());
+    }
+
+    private boolean isLive(Track track) {
+        return trackNameContainsButNotSongToLookFor(track, "live");
+    }
+
     private boolean songNameIsContainedIn(Track t) {
-        return simplified(t.getName()).contains(simplified(songToLookFor.getSong()));
+        String songName1 = simplified(t.getName());
+        String songName2 = simplified(songToLookFor.getSong());
+        return songName1.contains(songName2) ||
+                songName2.contains(songName1) ||
+                Arrays.stream(songToLookFor.getSong().split("-"))
+                        .map(String::trim)
+                        .filter(not(String::isEmpty))
+                        .map(this::simplified)
+                        .anyMatch(part -> simplified(t.getName()).contains(part));
     }
 
     private boolean allArtistNamesAreContainedIn(Track t) {
@@ -72,24 +90,69 @@ public class SongMatcher {
                 .flatMap(s -> Arrays.stream(s.split("\\s+")))
                 .map(String::trim)
                 .filter(not(String::isEmpty))
+                .filter(s -> s.length() > 1) // remove one-char things
+                .filter(not(this::isFillWord)) // remove fill-words
                 .collect(Collectors.joining(" "));
 
         return songToLookFor.getArtists()
                 .stream()
+                .map(this::replaceExceptionalArtistCases)
                 .flatMap(artistName -> Arrays.stream(artistName.split("\\s+")))
                 .map(String::trim)
                 .filter(not(String::isEmpty))
-                .map(SongMatcher::simplified)
+                .filter(s -> s.length() > 1) // remove one-char things
+                .filter(not(this::isFillWord)) // remove fill-words
+                .map(this::simplified)
                 .allMatch(trackArtists::contains);
     }
 
-    private static String simplified(String original) {
+
+    private boolean anyArtistNameIsContainedIn(Track t) {
+        final Set<String> trackArtists = Arrays.stream(t.getArtists())
+                .map(s -> simplified(s.getName()))
+                .filter(s -> s.length() > 1) // remove one-char things
+                .filter(not(this::isFillWord)) // remove fill-words
+                .collect(Collectors.toSet());
+
+        return songToLookFor.getArtists()
+                .stream()
+                .map(this::replaceExceptionalArtistCases)
+                .filter(s -> s.length() > 1) // remove one-char things
+                .filter(not(this::isFillWord)) // remove fill-words
+                .map(this::simplified)
+                .anyMatch(trackArtists::contains);
+    }
+
+    private String replaceExceptionalArtistCases(String orig) {
+        if (orig.equalsIgnoreCase("star academy") || orig.equalsIgnoreCase("star academy 1")) {
+            return "Star Academy I";
+        }
+        if (orig.equalsIgnoreCase("star academy 3")) {
+            return "Star Academy III";
+        }
+        if (songToLookFor.getChartYear() <= 1994 && orig.equalsIgnoreCase("the symbol")) {
+            return "Prince";
+        }
+        return orig;
+    }
+
+    private boolean isFillWord(String word) {
+        return word.matches("(?i)(&|und|and|feat\\.?|featuring|the|der|die|das)");
+    }
+
+    private String simplified(String original) {
         if (original == null) {
             return null;
         }
-        return original
-                .toLowerCase() // case insensitive
-                .replaceAll("[^a-z0-9]", ""); // no special chars
+
+        String simplified = Normalizer.normalize(original, Normalizer.Form.NFKD)
+                .replaceAll("[^\\p{ASCII}]", "")
+                .toLowerCase(); // case insensitive
+        return Arrays.stream(simplified.split("\\s"))
+                .map(String::trim)
+                .filter(not(this::isFillWord))
+                .map(s -> s.replaceAll("[^a-z0-9]", " ")) // no special chars)
+                .collect(Collectors.joining(" "));
     }
 
     private class TrackRanker implements Comparator<Track> {
@@ -103,6 +166,38 @@ public class SongMatcher {
             }
             if (o2 == null) {
                 return -1;
+            }
+
+            // song name matches better
+            if (songNameIsContainedIn(o1) && !songNameIsContainedIn(o2)) {
+                return -1;
+            }
+            if (!songNameIsContainedIn(o1) && songNameIsContainedIn(o2)) {
+                return +1;
+            }
+
+            // artists are perfect match
+            if (allArtistNamesAreContainedIn(o1) && !allArtistNamesAreContainedIn(o2)) {
+                return -1;
+            }
+            if (!allArtistNamesAreContainedIn(o1) && allArtistNamesAreContainedIn(o2)) {
+                return +1;
+            }
+
+            // prefer non-remixes
+            if (!isRemix(o1) && isRemix(o2)) {
+                return -1;
+            }
+            if (isRemix(o1) && !isRemix(o2)) {
+                return +1;
+            }
+
+            // prefer non-live
+            if (!isLive(o1) && isLive(o2)) {
+                return -1;
+            }
+            if (isLive(o1) && !isLive(o2)) {
+                return +1;
             }
 
             // most populars first

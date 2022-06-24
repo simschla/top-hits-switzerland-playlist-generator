@@ -13,21 +13,21 @@ import java.util.List;
 public class SongInfo {
 
     @NonNull
-    Integer chartYear;
+    Integer position;
 
     @NonNull
-    Integer position;
+    String song;
 
     @NonNull
     @Singular
     List<String> artists;
 
     @NonNull
-    String song;
-
-    @NonNull
     @Builder.Default
     Boolean swissAct = false;
+
+    @NonNull
+    Integer chartYear;
 
     URL coverImageUrl;
 

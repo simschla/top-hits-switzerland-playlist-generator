@@ -1,6 +1,5 @@
 package ch.simschla.swisstophits.scraper.pages.top50;
 
-import ch.simschla.swisstophits.scraper.exception.ScrapingException;
 import ch.simschla.swisstophits.scraper.pages.PageObjectElement;
 import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlBold;
@@ -43,7 +42,7 @@ public class Top50ChartsElement implements PageObjectElement {
 
     public String songName() {
         HtmlAnchor songAnchor = getSongAnchor();
-        return songAnchor.asNormalizedText().split("\n")[1];
+        return songAnchor.asNormalizedText().split("\n")[1].trim();
     }
 
     public Collection<String> artists() {
@@ -53,7 +52,7 @@ public class Top50ChartsElement implements PageObjectElement {
     }
 
     private Collection<String> parseArtists(String artistsText) {
-        return Arrays.stream(artistsText.split(",|&|feat.|featuring|Feat.|Featuring"))
+        return Arrays.stream(artistsText.split(", | & | \\+ | / | feat. | featuring | Feat. | Featuring | and | und "))
                 .filter(Objects::nonNull)
                 .map(String::trim)
                 .map(s -> s.length() == 0 ? null : s)
@@ -67,7 +66,7 @@ public class Top50ChartsElement implements PageObjectElement {
             String background_url = songCoverDiv.getStyleElement("background").getValue();
             return new URL(background_url.split("\"")[1]);
         } catch (MalformedURLException e) {
-            throw ScrapingException.wrap(e);
+            return null;
         }
     }
 }

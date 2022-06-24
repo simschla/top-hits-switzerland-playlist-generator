@@ -42,7 +42,9 @@ public class SwissTopHitsPlaylistsGenerator {
     }
 
     private void generate() {
-        IntStream.range(1994, 1995)
+        // 2003/2004
+        IntStream.of(1994)//, 2003)
+//        IntStream.range(1968, LocalDate.now().getYear() - 1)
                 .forEach(this::generate);
     }
 

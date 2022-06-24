@@ -12,6 +12,7 @@ import se.michaelthelin.spotify.model_objects.specification.Paging;
 import se.michaelthelin.spotify.model_objects.specification.Track;
 
 import java.io.IOException;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,7 +36,7 @@ public class SongSearcher {
         Paging<Track> trackPaging = null;
         try {
             final String searchString = searchString(songInfo);
-            LOGGER.debug("Searching with '{}' for {}", searchString, songInfo);
+            LOGGER.info("({}) Searching with '{}' for {}", songInfo.getPosition(), searchString, songInfo.toShortDesc());
             trackPaging = this.spotifyApi.searchTracks(searchString)
                     .market(CountryCode.CH)
                     .build()
@@ -47,15 +48,29 @@ public class SongSearcher {
     }
 
     private static String searchString(@NonNull SongInfo songInfo) {
-        return Stream.of(
-                        Stream.of(songInfo.getSong()),
-                        songInfo.getArtists().stream()/*,
+        return Normalizer.normalize(
+                        Stream.of(
+                                        Stream.of(songInfo.getSong()),
+                                        replaceSpecialArtists(songInfo)/*,
                         Stream.of(String.valueOf(songInfo.getChartYear()))*/)
-                .flatMap(s -> s)
-                .map(String::trim)
-                .map(s -> "".equals(s) ? null : s)
-                .filter(Objects::nonNull)
+                                .flatMap(s -> s)
+                                .map(String::trim)
+                                .map(s -> "".equals(s) ? null : s)
+                                .filter(Objects::nonNull)
 //                .map(String::toLowerCase)
-                .collect(Collectors.joining(" "));
+                                .collect(Collectors.joining(" ")),
+                        Normalizer.Form.NFKD)
+                .replaceAll("[^\\p{ASCII}]", "");
+    }
+
+    private static Stream<String> replaceSpecialArtists(@NonNull SongInfo songInfo) {
+        return songInfo.getArtists()
+                .stream()
+                .map(artist -> {
+                    if (songInfo.getChartYear() <= 1994 && artist.equalsIgnoreCase("the symbol")) {
+                        return "Prince";
+                    }
+                    return artist;
+                });
     }
 }
