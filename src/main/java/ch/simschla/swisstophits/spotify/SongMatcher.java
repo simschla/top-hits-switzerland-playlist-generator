@@ -65,7 +65,7 @@ public class SongMatcher {
     }
 
     private boolean trackNameContainsButNotSongToLookFor(Track track, String searchString) {
-        return track.getName().toLowerCase().contains(searchString.toLowerCase()) && !songToLookFor.getSong().toLowerCase().contains(searchString.toLowerCase());
+        return containsWord(track.getName().toLowerCase(), searchString.toLowerCase()) && !containsWord(songToLookFor.getSong().toLowerCase(), searchString.toLowerCase());
     }
 
     private boolean isLive(Track track) {
@@ -73,15 +73,40 @@ public class SongMatcher {
     }
 
     private boolean songNameIsContainedIn(Track t) {
-        String songName1 = simplified(t.getName());
-        String songName2 = simplified(songToLookFor.getSong());
-        return songName1.contains(songName2) ||
-                songName2.contains(songName1) ||
+        String trackSongName = simplified(t.getName());
+        String songToLookForName = simplified(songToLookFor.getSong());
+        return containsWord(trackSongName, songToLookForName) ||
+                containsWord(songToLookForName, trackSongName) ||
+                songNamePartsAreContainedIn(t);
+    }
+
+    private boolean containsWord(String s, String word) {
+        return s.matches(".*\\b" + word + "\\b.*");
+    }
+
+    private boolean songNamePartsAreContainedIn(Track t) {
+        Set<String> trackSongParts = Arrays.stream(t.getName().split("-"))
+                .map(String::trim)
+                .filter(not(String::isEmpty))
+                .filter(not(this::isIgnoredSongPart))
+                .map(this::simplified)
+                .collect(Collectors.toSet());
+        Set<String> songToLookForParts =
                 Arrays.stream(songToLookFor.getSong().split("-"))
                         .map(String::trim)
                         .filter(not(String::isEmpty))
+                        .filter(not(this::isIgnoredSongPart))
                         .map(this::simplified)
-                        .anyMatch(part -> simplified(t.getName()).contains(part));
+                        .collect(Collectors.toSet());
+        if (songToLookForParts.stream()
+                .anyMatch(songToLookForPart -> trackSongParts.stream().anyMatch(trackSongPart -> containsWord(trackSongPart, songToLookForPart) || containsWord(songToLookForPart, trackSongPart)))) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isIgnoredSongPart(String part) {
+        return part.matches("(?i)(radio version|radio edit|\\(.* Theme\\)|\\(.* Version\\))");
     }
 
     private boolean allArtistNamesAreContainedIn(Track t) {
@@ -152,6 +177,8 @@ public class SongMatcher {
                 .map(String::trim)
                 .filter(not(this::isFillWord))
                 .map(s -> s.replaceAll("[^a-z0-9]", " ")) // no special chars)
+                .map(String::trim)
+                .filter(not(String::isEmpty))
                 .collect(Collectors.joining(" "));
     }
 

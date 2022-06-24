@@ -32,7 +32,7 @@ public class SongInfo {
     URL coverImageUrl;
 
     public String toShortDesc() {
-        return String.format("%s by %s", getSong(), getArtists()) + (getSwissAct() ? " [CH]" : "");
+        return String.format("%s %s", getSong(), getArtists()) + (getSwissAct() ? " [CH]" : "");
     }
 
 }

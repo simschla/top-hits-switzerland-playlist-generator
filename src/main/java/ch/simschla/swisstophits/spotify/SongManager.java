@@ -152,7 +152,7 @@ public class SongManager {
         if (track == null) {
             return "-";
         }
-        return String.format("%s by %s, %s (%s)", track.getName(), Arrays.stream(track.getArtists()).map(ArtistSimplified::getName).collect(Collectors.toList()), track.getAlbum().getName(), track.getAlbum().getReleaseDate());
+        return String.format("%s %s, %s (%s)", track.getName(), Arrays.stream(track.getArtists()).map(ArtistSimplified::getName).collect(Collectors.toList()), track.getAlbum().getName(), track.getAlbum().getReleaseDate());
     }
 
     @NonNull
