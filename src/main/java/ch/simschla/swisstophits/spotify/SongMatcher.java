@@ -34,6 +34,7 @@ public class SongMatcher {
         return tracks.stream()
                 .filter(track -> track.getName().equalsIgnoreCase(songToLookFor.getSong()))
                 .filter(this::allArtistNamesAreContainedIn)
+                .filter(track -> releaseDelta(track.getAlbum().getReleaseDate()) <= 1)
                 .findFirst();
     }
 
@@ -41,7 +42,8 @@ public class SongMatcher {
         return tracks.stream()
                 .filter(track -> songNameIsContainedIn(track))
                 .filter(track -> anyArtistNameIsContainedIn(track))
-                .min(new TrackRanker());
+                .sorted(new TrackRanker())
+                .findFirst();
     }
 
     private boolean isBlocklisted(Track track) {
@@ -259,13 +261,13 @@ public class SongMatcher {
 //                    .thenComparingInt((Track track) -> track.getName().contains("Radio Edit") || track.getName().contains("Short Version") || track.getName().contains("Single Version") ? -11 : 1))
             return 0;
         }
+    }
 
-        private int releaseDelta(String releaseDate) {
-            try {
-                return Integer.parseInt(releaseDate.substring(0, 4)) - songToLookFor.getChartYear();
-            } catch (NumberFormatException e) {
-                return 0;
-            }
+    private int releaseDelta(String releaseDate) {
+        try {
+            return Integer.parseInt(releaseDate.substring(0, 4)) - songToLookFor.getChartYear();
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 }
