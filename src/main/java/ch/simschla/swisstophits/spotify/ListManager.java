@@ -1,10 +1,13 @@
 package ch.simschla.swisstophits.spotify;
 
+import ch.simschla.swisstophits.mode.TopHitsGeneratorMode;
 import com.neovisionaries.i18n.CountryCode;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import org.apache.hc.core5.http.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
 import se.michaelthelin.spotify.model_objects.specification.Paging;
@@ -13,13 +16,12 @@ import se.michaelthelin.spotify.model_objects.specification.PlaylistSimplified;
 import se.michaelthelin.spotify.model_objects.specification.User;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Pattern;
 
 public class ListManager {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ListManager.class);
 
     public static final String TARGET_LIST_NAME_PREFIX = "Top Hits Schweiz";
 
@@ -46,6 +48,10 @@ public class ListManager {
     }
 
     public Playlist createPlaylist(@NonNull Integer year) {
+        if (TopHitsGeneratorMode.INSTANCE.dryRun()) {
+            LOGGER.info("DRY-RUN. Not creating playlist {}", year);
+            return new Playlist.Builder().setId(UUID.randomUUID().toString()).setName(nameForYear(year)).build();
+        }
         final String targetListName = nameForYear(year);
         if (fetchPlaylist(year).isPresent()) {
             throw new SpotifyException(year + ": " + targetListName + " already exists!");

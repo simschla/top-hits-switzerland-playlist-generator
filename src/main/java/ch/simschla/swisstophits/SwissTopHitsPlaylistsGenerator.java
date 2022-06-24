@@ -56,13 +56,13 @@ public class SwissTopHitsPlaylistsGenerator {
         SpotifyApi spotifyApi = getSpotifyApi();
 
         // assert list
-        LOGGER.info("{} - asserting playlist", year);
+        LOGGER.info("{} - asserting playlist exists", year);
         ListManager listManager = new ListManager(spotifyApi);
         Playlist playlist = listManager.fetchPlaylist(year)
                 .orElseGet(() -> listManager.createPlaylist(year));
 
         // add songs
-        LOGGER.info("{} - setting songs if needed", year);
+        LOGGER.info("{} - searching songs and updating playlist if needed", year);
         SongManager songManager = new SongManager(spotifyApi, playlist);
         songManager.setTrackList(info, true);
     }

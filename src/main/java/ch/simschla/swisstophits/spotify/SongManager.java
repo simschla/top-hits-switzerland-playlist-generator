@@ -1,5 +1,6 @@
 package ch.simschla.swisstophits.spotify;
 
+import ch.simschla.swisstophits.mode.TopHitsGeneratorMode;
 import ch.simschla.swisstophits.model.ChartInfo;
 import ch.simschla.swisstophits.model.SongInfo;
 import com.google.gson.JsonArray;
@@ -11,18 +12,13 @@ import org.slf4j.LoggerFactory;
 import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
 import se.michaelthelin.spotify.model_objects.special.SnapshotResult;
-import se.michaelthelin.spotify.model_objects.specification.Paging;
-import se.michaelthelin.spotify.model_objects.specification.Playlist;
-import se.michaelthelin.spotify.model_objects.specification.PlaylistTrack;
-import se.michaelthelin.spotify.model_objects.specification.Track;
+import se.michaelthelin.spotify.model_objects.specification.*;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class SongManager {
 
@@ -41,30 +37,32 @@ public class SongManager {
         try {
             // current state
             List<PlaylistTrack> allCurrentTracks = fetchAllTracks();
-            LOGGER.info("Current tracks for {}: {}", chartInfo.getChartYear(), allCurrentTracks);
+            LOGGER.debug("Current tracks for {}: {}", chartInfo.getChartYear(), allCurrentTracks);
 
             if (allCurrentTracks.size() == chartInfo.getChartSongs().size() && !forceRecreate) {
                 LOGGER.info("Playlist up to date, skipping.");
                 return;
             }
 
-            // delete before recreating
-            if (!allCurrentTracks.isEmpty()) {
-                LOGGER.info("Deleting current tracks: {}", allCurrentTracks);
-            }
-            deleteCurrentTracks(allCurrentTracks);
-
             // search
+            LOGGER.info("Searching {} songs for year {}.", chartInfo.getChartSongs().size(), chartInfo.getChartYear());
             List<Track> foundTracks = new ArrayList<>(chartInfo.getChartSongs().size());
             searchChartSongs(chartInfo, foundTracks);
 
             // set to playlist
             if (foundTracks.isEmpty()) {
                 LOGGER.error("Could not find any tracks for chart year {}", chartInfo.getChartYear());
-
+                return;
             }
-            setToPlaylist(foundTracks);
+            printMatchResult(chartInfo, foundTracks);
 
+            // delete before recreating
+            if (!allCurrentTracks.isEmpty()) {
+                deleteCurrentTracks(allCurrentTracks);
+            }
+
+            List<Track> tracksToSave = foundTracks.stream().filter(Objects::nonNull).toList();
+            setToPlaylist(tracksToSave);
         } catch (IOException | SpotifyWebApiException | ParseException e) {
             throw new SpotifyException(e);
         }
@@ -78,18 +76,78 @@ public class SongManager {
             List<Track> tracks = searcher.search(chartSong);
             if (tracks.isEmpty()) {
                 LOGGER.warn("Could not find any track matching {} -- skipping.", chartSong);
+                foundTracks.add(null);
                 continue;
             }
 
             final Optional<Track> track = selectTrack(chartSong, tracks);
             if (track.isEmpty()) {
                 LOGGER.warn("Could not select matching tracking for {}. Available: {}", chartSong, tracks);
+                foundTracks.add(null);
                 continue;
             }
-            LOGGER.info("Using {} for {}.", track.get(), chartSong);
+            LOGGER.debug("Using {} for {}.", track.get(), chartSong);
             LOGGER.debug("First 5: {}", tracks.subList(0, Math.min(5, tracks.size())).stream().map(t -> "\n- " + t).collect(Collectors.joining("\n")));
             foundTracks.add(track.get());
         }
+    }
+
+    private void printMatchResult(ChartInfo chartInfo, List<Track> tracks) {
+        if (chartInfo.getChartSongs().size() != tracks.size()) {
+            throw new IllegalStateException("Match results are not on par. Charts " + chartInfo.getChartSongs().size() + " elements, but tracks " + tracks.size() + " elements.");
+        }
+        LinkedHashMap<String, String> matchResults = new LinkedHashMap<>();
+        int maxLengthSong = 0;
+        int maxLengthMatch = 0;
+        for (int i = 0; i < tracks.size(); i++) {
+            Track track = tracks.get(i);
+            SongInfo songInfo = chartInfo.getChartSongs().get(i);
+            String songInfoShortDesc = songInfo.toShortDesc();
+            String trackShortDesc = describeTrack(track);
+
+            matchResults.put(songInfoShortDesc, trackShortDesc);
+
+            maxLengthMatch = Math.max(maxLengthMatch, trackShortDesc.length());
+            maxLengthSong = Math.max(maxLengthSong, songInfoShortDesc.length());
+        }
+
+
+        // print header
+        int tableLength = maxLengthMatch + 2 + maxLengthSong + 2 + 3;
+
+        final StringBuilder table = new StringBuilder();
+        table.append(repeat("=", tableLength))
+                .append("\n");
+        table.append("| ")
+                .append(String.format("%-" + maxLengthSong + "s", "Charts-Info"))
+                .append(" | ")
+                .append(String.format("%-" + maxLengthMatch + "s", "Spotify Match"))
+                .append(" |\n");
+        table.append(repeat("=", tableLength))
+                .append("\n");
+
+        for (Map.Entry<String, String> entry : matchResults.entrySet()) {
+            table.append("| ")
+                    .append(String.format("%-" + maxLengthSong + "s", entry.getKey()))
+                    .append(" | ")
+                    .append(String.format("%-" + maxLengthMatch + "s", entry.getValue()))
+                    .append(" |\n");
+            table.append(repeat("-", tableLength))
+                    .append("\n");
+        }
+
+        LOGGER.info("Match Results for year {}:\n{}", chartInfo.getChartYear(), table);
+    }
+
+    private String repeat(String s, int times) {
+        return IntStream.range(0, times).mapToObj(i -> s).collect(Collectors.joining(""));
+    }
+
+    private String describeTrack(Track track) {
+        if (track == null) {
+            return "-";
+        }
+        return String.format("%s by %s, %s (%s)", track.getName(), Arrays.stream(track.getArtists()).map(ArtistSimplified::getName).collect(Collectors.toList()), track.getAlbum().getName(), track.getAlbum().getReleaseDate());
     }
 
     @NonNull
@@ -148,6 +206,11 @@ public class SongManager {
     }
 
     private void deleteCurrentTracks(List<PlaylistTrack> tracks) throws IOException, ParseException, SpotifyWebApiException {
+        if (TopHitsGeneratorMode.INSTANCE.dryRun()) {
+            LOGGER.info("DRY-RUN. Not deleting from playlist {}", playlist.getName());
+            return;
+        }
+        LOGGER.info("Deleting {} current tracks for recreation of playlist {}.", tracks.size(), playlist.getName());
         inChunks(tracks, 100, curList -> {
             JsonArray tracksArray = new JsonArray(curList.size());
             curList.stream()
@@ -164,6 +227,11 @@ public class SongManager {
     }
 
     private void setToPlaylist(List<Track> tracks) throws IOException, ParseException, SpotifyWebApiException {
+        if (TopHitsGeneratorMode.INSTANCE.dryRun()) {
+            LOGGER.info("DRY-RUN. Not saving to playlist {}", playlist.getName());
+            return;
+        }
+        LOGGER.info("Saving {} tracks to playlist {}", tracks.size(), playlist.getName());
         AtomicInteger offset = new AtomicInteger(0);
         JsonArray jsonArray = new JsonArray(tracks.size());
         for (Track track : tracks) {

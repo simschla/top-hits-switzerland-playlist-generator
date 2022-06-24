@@ -35,7 +35,7 @@ public class SongSearcher {
         Paging<Track> trackPaging = null;
         try {
             final String searchString = searchString(songInfo);
-            LOGGER.info("Searching with '{}' for {}", searchString, songInfo);
+            LOGGER.debug("Searching with '{}' for {}", searchString, songInfo);
             trackPaging = this.spotifyApi.searchTracks(searchString)
                     .market(CountryCode.CH)
                     .build()
