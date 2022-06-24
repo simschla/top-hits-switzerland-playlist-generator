@@ -161,38 +161,6 @@ public class SongManager {
         return songMatcher.selectBestMatchingTrack(tracks);
     }
 
-    private boolean matchesKaraoke(SongInfo chartSong, Track t) {
-        if (chartSong.getSong().toLowerCase().contains("karaoke")) {
-            return false;
-        }
-        if (chartSong.getArtists().stream().anyMatch(s -> s.toLowerCase().contains("karaoke"))) {
-            return false;
-        }
-        return t.getName().toLowerCase().contains("karaoke") || t.getAlbum().getName().contains("karaoke") || Arrays.stream(t.getArtists()).anyMatch(a -> a.getName().toLowerCase().contains("karaoke"));
-    }
-
-    private boolean songNamesMatch(SongInfo chartSong, Track t) {
-        boolean hasSameWords = t.getName().toLowerCase().replaceAll("[^a-z0-9]", "").contains(chartSong.getSong().toLowerCase().replaceAll("[^a-z0-9]", ""));
-        if (hasSameWords) {
-            return true;
-        }
-        return false;
-    }
-
-    private boolean artistNamesMatch(SongInfo chartSong, Track t) {
-        String trackArtists = Arrays.stream(t.getArtists()).map(s -> s.getName().toLowerCase().replaceAll("[^a-z0-9]", "")).collect(Collectors.joining(" "));
-        for (String artist : chartSong.getArtists()) {
-            List<String> chartArtists = Arrays.stream(artist.toLowerCase().split(" ")).map(s -> s.replaceAll("[^a-z0-9]", "")).toList();
-            for (String chartArtist : chartArtists) {
-                if (!trackArtists.contains(chartArtist)) {
-                    return false;
-                }
-
-            }
-        }
-        return true;
-    }
-
     private List<PlaylistTrack> fetchAllTracks() throws IOException, ParseException, SpotifyWebApiException {
         if (TopHitsGeneratorMode.INSTANCE.dryRun()) {
             LOGGER.info("DRY-RUN. Not fetching current state from playlist {}", playlist.getName());
