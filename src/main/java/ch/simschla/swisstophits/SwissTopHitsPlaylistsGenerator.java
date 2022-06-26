@@ -1,6 +1,7 @@
 package ch.simschla.swisstophits;
 
 import ch.simschla.swisstophits.model.ChartInfo;
+import ch.simschla.swisstophits.normalizer.SongInfoNormalizer;
 import ch.simschla.swisstophits.scraper.ChartSongsScraper;
 import ch.simschla.swisstophits.spotify.ListManager;
 import ch.simschla.swisstophits.spotify.SongManager;
@@ -37,8 +38,6 @@ public class SwissTopHitsPlaylistsGenerator {
         } catch (URISyntaxException e) {
             throw new TopHitsGeneratorException(e);
         }
-
-
     }
 
     private void generate() {
@@ -55,6 +54,10 @@ public class SwissTopHitsPlaylistsGenerator {
         ChartSongsScraper scraper = new ChartSongsScraper(year);
         ChartInfo info = scraper.fetchChartInfo();
 
+        // normalize
+        info = new SongInfoNormalizer().normalize(info);
+
+        // search + create
         SpotifyApi spotifyApi = getSpotifyApi();
 
         // assert list

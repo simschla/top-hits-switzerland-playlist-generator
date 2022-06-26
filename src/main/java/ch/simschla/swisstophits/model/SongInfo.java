@@ -1,9 +1,6 @@
 package ch.simschla.swisstophits.model;
 
-import lombok.Builder;
-import lombok.NonNull;
-import lombok.Singular;
-import lombok.Value;
+import lombok.*;
 
 import java.net.URL;
 import java.util.List;
@@ -16,10 +13,12 @@ public class SongInfo {
     Integer position;
 
     @NonNull
+    @With
     String song;
 
     @NonNull
     @Singular
+    @With
     List<String> artists;
 
     @NonNull

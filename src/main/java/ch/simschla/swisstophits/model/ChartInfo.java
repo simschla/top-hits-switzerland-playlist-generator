@@ -1,9 +1,6 @@
 package ch.simschla.swisstophits.model;
 
-import lombok.Builder;
-import lombok.NonNull;
-import lombok.Singular;
-import lombok.Value;
+import lombok.*;
 
 import java.util.List;
 
@@ -16,5 +13,6 @@ public class ChartInfo {
 
     @NonNull
     @Singular
+    @With
     List<SongInfo> chartSongs;
 }
