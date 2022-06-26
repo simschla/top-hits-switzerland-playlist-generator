@@ -31,7 +31,7 @@ public class SongMatcher {
     public Optional<Track> selectBestMatchingTrack(List<Track> tracks) {
 
         RatingCalculator ratingCalculator = new RatingCalculator(tracks);
-        List<Rating> ratings = ratingCalculator.sortedRatings(15d);
+        List<Rating> ratings = ratingCalculator.sortedRatings(18d);
         if (ratings.isEmpty()) {
             LOGGER.debug("--> no match in limit. Max 5: {}", ratingCalculator.sortedRatings(0d).stream().limit(5).map(Object::toString).collect(Collectors.joining("\n\n")));
             return Optional.empty();
