@@ -1,10 +1,7 @@
 package ch.simschla.swisstophits.spotify;
 
 import ch.simschla.swisstophits.model.SongInfo;
-import lombok.AccessLevel;
-import lombok.Data;
 import lombok.NonNull;
-import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.michaelthelin.spotify.model_objects.specification.Track;
@@ -31,7 +28,7 @@ public class SongMatcher {
     public Optional<Track> selectBestMatchingTrack(List<Track> tracks) {
 
         RatingCalculator ratingCalculator = new RatingCalculator(tracks);
-        List<Rating> ratings = ratingCalculator.sortedRatings(22d);
+        List<SongRating> ratings = ratingCalculator.sortedRatings(22d);
         if (ratings.isEmpty()) {
             LOGGER.info("--> no match in limit. Max 5: {}", ratingCalculator.sortedRatings(0d).stream().limit(5).map(Object::toString).collect(Collectors.joining("\n\n")));
             return Optional.empty();
@@ -223,7 +220,7 @@ public class SongMatcher {
 
     private class RatingCalculator {
 
-        private final Map<Track, Rating> ratings = new HashMap<>();
+        private final Map<Track, SongRating> ratings = new HashMap<>();
         private final List<Track> allTracks;
 
         public RatingCalculator(List<Track> allTracks) {
@@ -235,12 +232,12 @@ public class SongMatcher {
             for (Track track : allTracks) {
                 rate(track);
             }
-            Collection<Rating> allRatings = this.ratings.values();
+            Collection<SongRating> allRatings = this.ratings.values();
             allRatings.forEach(rating -> rating.calculateScore(allRatings));
         }
 
         private void rate(Track track) {
-            Rating rating = new Rating(track);
+            SongRating rating = new SongRating(track);
 
             rating.setBlocked(isBlocklisted(track));
             if (rating.isBlocked()) {
@@ -306,11 +303,11 @@ public class SongMatcher {
             ratings.put(track, rating);
         }
 
-        public List<Rating> sortedRatings(double minVal) {
+        public List<SongRating> sortedRatings(double minVal) {
             return ratings
                     .values()
                     .stream()
-                    .sorted(Comparator.comparing(Rating::getCalculatedScore).reversed())
+                    .sorted(Comparator.comparing(SongRating::getCalculatedScore).reversed())
                     .filter(r -> r.getCalculatedScore() >= minVal)
                     .toList();
         }
@@ -368,63 +365,4 @@ public class SongMatcher {
     }
 
 
-    @Data
-    private static class Rating {
-
-        @Setter(value = AccessLevel.PRIVATE)
-        Double calculatedScore;
-
-        boolean blocked;
-
-        double songNameScore;
-
-        double artistCountScore;
-
-        double artistNamesScore;
-
-        double remixScore;
-
-        double liveScore;
-
-        double radioVersionScore;
-
-        double popularityScore;
-
-        double rankingScore;
-
-        double releaseDateScore;
-
-        double durationScore;
-
-        double trackNumberScore;
-
-        @NonNull
-        final Track track;
-
-        private void calculateScore(Collection<Rating> all) {
-            if (calculatedScore != null) {
-                return; // already done
-            }
-
-            if (blocked) {
-                calculatedScore = Double.MIN_VALUE;
-                return;
-            }
-
-            calculatedScore = Stream.of(
-                            getSongNameScore(),
-                            getArtistNamesScore(),
-                            getArtistCountScore(),
-                            getRemixScore(),
-                            getLiveScore(),
-                            getRadioVersionScore(),
-                            getPopularityScore(),
-                            getRankingScore(),
-                            getReleaseDateScore(),
-                            getDurationScore(),
-                            getTrackNumberScore()
-                    ).reduce(Double::sum)
-                    .orElseThrow();
-        }
-    }
 }
