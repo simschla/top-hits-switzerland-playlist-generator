@@ -248,7 +248,6 @@ public class SongMatcher {
             // shorter is better (longer tracks tend to be remixes)
             List<Track> sortedByLength = allTracks.stream().sorted(Comparator.comparing(Track::getDurationMs)).toList();
             rating.setDurationScore(2.0d * ((allTracks.size() - sortedByLength.indexOf(track)) / (1.0d * allTracks.size())));
-//            rating.setDurationScore(0.5d * ((allTracks.stream().mapToDouble(Track::getDurationMs).max().orElseThrow() - track.getDurationMs()) / 1000d / 60d));
 
             if (isLive(track)) {
                 rating.setLiveScore(-2.0d);
@@ -263,7 +262,7 @@ public class SongMatcher {
 
             // below zero here means better, but to far away from chart year is probably remix or re-recorded or birthday version
             int deltaYears = releaseDelta(track.getAlbum().getReleaseDate());
-            if (deltaYears == 1 || deltaYears == 0 || deltaYears == -1) {
+            if (deltaYears == 0 || deltaYears == -1) {
                 rating.setReleaseDateScore(2d);
             } else if (deltaYears > -4 && deltaYears < -1) {
                 rating.setReleaseDateScore(1d);
