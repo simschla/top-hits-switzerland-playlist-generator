@@ -51,8 +51,9 @@ public class SongSearcher {
         return Normalizer.normalize(
                         Stream.of(
                                         Stream.of(songInfo.getSong()),
-                                        replaceSpecialArtists(songInfo)/*,
-                        Stream.of(String.valueOf(songInfo.getChartYear()))*/)
+                                        replaceSpecialArtists(songInfo),
+                                        Stream.of(String.valueOf(songInfo.getChartYear()))
+                                )
                                 .flatMap(s -> s)
                                 .map(String::trim)
                                 .map(s -> "".equals(s) ? null : s)

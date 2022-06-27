@@ -213,13 +213,7 @@ public class SongMatcher {
                 return; //nothing else to do
             }
 
-            if (songNameIsContainedIn(track)) {
-                rating.setSongNameScore(10d);
-            } else if (songNamePartsAreContainedIn(track)) {
-                rating.setSongNameScore(5d);
-            } else {
-                rating.setSongNameScore(-5d);
-            }
+            rating.setSongNameScore(calculateSongNameRating(track));
 
             if (songToLookFor.getArtists().size() == track.getArtists().length) {
                 rating.setArtistCountScore(2d);
@@ -238,10 +232,10 @@ public class SongMatcher {
             rating.setDurationScore(0.5d * ((allTracks.stream().map(Track::getDurationMs).max(Comparator.naturalOrder()).orElseThrow() - track.getDurationMs()) / 1000d / 60d));
 
             if (isLive(track)) {
-                rating.setLiveScore(1.0d);
+                rating.setLiveScore(-2.0d);
             }
             if (isRemix(track)) {
-                rating.setLiveScore(1.0d);
+                rating.setLiveScore(-2.0d);
             }
 
             // below zero here means better, but to far away from chart year is probably remix or re-recorded or birthday version
@@ -265,6 +259,57 @@ public class SongMatcher {
                     .filter(r -> r.getCalculatedScore() >= minVal)
                     .toList();
         }
+    }
+
+    private double calculateSongNameRating(Track track) {
+        // check for words, the more "in the front" the words match, the better, sequential matches might be boosted?
+        List<String> songToLookForParts = selectTokens(songToLookFor.getSong());
+        List<String> trackNameParts = selectTokens(track.getName());
+
+        List<Integer> trackNamePositions = trackNameParts.stream()
+                .map(s -> songToLookForParts.indexOf(s))
+                .toList();
+
+        final double pointsToGiveInTotal = 10d;
+
+        List<Double> weights = new ArrayList<>(trackNamePositions.size());
+        double weight = 1.0d;
+        for (int i = 0; i < trackNamePositions.size(); i++) {
+            weights.add(0, weight);
+            weight *= 1.5d;
+        }
+
+        Double pointPerWeight = pointsToGiveInTotal / weights.stream().mapToDouble(d -> d).sum();
+
+        double achieved = 0d;
+
+        double boost = 1.0d;
+
+        for (int i = 0; i < trackNamePositions.size(); i++) {
+            if (trackNamePositions.get(i) >= 0) {
+                achieved += (boost * weights.get(i) * pointPerWeight);
+                boost += 0.1d;
+            } else {
+                boost = 1.0d; // reset
+            }
+        }
+
+        if (achieved > 0) {
+            return achieved;
+        }
+
+        return -5d;
+
+    }
+
+    private List<String> selectTokens(String origString) {
+        return Arrays.stream(origString.split("\\b"))
+                .filter(Objects::nonNull)
+                .map(this::simplified)
+                .map(String::trim)
+                .filter(not(String::isEmpty))
+                .distinct()
+                .toList();
     }
 
 
