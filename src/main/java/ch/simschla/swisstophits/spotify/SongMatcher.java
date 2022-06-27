@@ -31,13 +31,13 @@ public class SongMatcher {
     public Optional<Track> selectBestMatchingTrack(List<Track> tracks) {
 
         RatingCalculator ratingCalculator = new RatingCalculator(tracks);
-        List<Rating> ratings = ratingCalculator.sortedRatings(21.5d);
+        List<Rating> ratings = ratingCalculator.sortedRatings(22d);
         if (ratings.isEmpty()) {
             LOGGER.info("--> no match in limit. Max 5: {}", ratingCalculator.sortedRatings(0d).stream().limit(5).map(Object::toString).collect(Collectors.joining("\n\n")));
             return Optional.empty();
         }
         LOGGER.info("Rating of {} for {}.", ratings.get(0), songToLookFor.toShortDesc());
-        if (songToLookFor.getSong().equals("Take Control")) {
+        if (songToLookFor.getSong().equals("Jenny From The Block")) {
             LOGGER.info("--> First 10 were: {}", ratingCalculator.sortedRatings(0d).stream().limit(10).map(Object::toString).collect(Collectors.joining("\n\n")));
 
         }
@@ -46,7 +46,7 @@ public class SongMatcher {
     }
 
     private boolean isBlocklisted(Track track) {
-        return matchesKaraoke(track) || isLive(track) /*|| isRemix(track)*/;
+        return matchesKaraoke(track) || isLive(track) || isInstrumental(track)/*|| isRemix(track)*/;
     }
 
     private boolean matchesKaraoke(Track t) {
@@ -59,6 +59,14 @@ public class SongMatcher {
         return simplified(t.getName()).contains("karaoke")
                 || simplified(t.getAlbum().getName()).contains("karaoke")
                 || Arrays.stream(t.getArtists()).map(artist -> simplified(artist.getName())).anyMatch(a -> a.contains("karaoke"));
+    }
+
+    private boolean isInstrumental(Track t) {
+        if (simplified(songToLookFor.getSong()).contains("instrumental")) {
+            return false;
+        }
+        return simplified(t.getName()).contains("instrumental")
+                || simplified(t.getAlbum().getName()).contains("instrumental");
     }
 
     private boolean isRemix(Track track) {
@@ -119,15 +127,14 @@ public class SongMatcher {
     }
 
     private boolean allArtistNamesAreContainedIn(Track t) {
-        final String trackArtists = Arrays.stream(t.getArtists())
-                .map(s -> simplified(s.getName()))
-                .flatMap(s -> Arrays.stream(s.split("\\s+")))
-                .map(String::trim)
-                .filter(not(String::isEmpty))
-                .filter(s -> s.length() > 1) // remove one-char things
-                .filter(not(this::isFillWord)) // remove fill-words
+        final String trackArtists = trackArtists(t) // remove fill-words
                 .collect(Collectors.joining(" "));
 
+        return songToLookForArtists()
+                .allMatch(trackArtists::contains);
+    }
+
+    private Stream<String> songToLookForArtists() {
         return songToLookFor.getArtists()
                 .stream()
                 .map(this::replaceExceptionalArtistCases)
@@ -136,8 +143,23 @@ public class SongMatcher {
                 .filter(not(String::isEmpty))
                 .filter(s -> s.length() > 1) // remove one-char things
                 .filter(not(this::isFillWord)) // remove fill-words
-                .map(this::simplified)
-                .allMatch(trackArtists::contains);
+                .map(this::simplified);
+    }
+
+    private Stream<String> trackArtists(Track t) {
+        return Arrays.stream(t.getArtists())
+                .map(s -> simplified(s.getName()))
+                .flatMap(s -> Arrays.stream(s.split("\\s+")))
+                .map(String::trim)
+                .filter(not(String::isEmpty))
+                .filter(s -> s.length() > 1) // remove one-char things
+                .filter(not(this::isFillWord));
+    }
+
+    private boolean noOtherArtistNamesAreContainedIn(Track t) {
+        String songArtists = songToLookForArtists().collect(Collectors.joining(" "));
+        return trackArtists(t)
+                .noneMatch(not(songArtists::contains));
     }
 
 
@@ -231,8 +253,10 @@ public class SongMatcher {
             if (songToLookFor.getArtists().size() == track.getArtists().length) {
                 rating.setArtistCountScore(2d);
             }
-            if (allArtistNamesAreContainedIn(track)) {
+            if (allArtistNamesAreContainedIn(track) && noOtherArtistNamesAreContainedIn(track)) {
                 rating.setArtistNamesScore(10d);
+            } else if (allArtistNamesAreContainedIn(track)) {
+                rating.setArtistNamesScore(7d);
             } else if (anyArtistNameIsContainedIn(track)) {
                 rating.setArtistNamesScore(5d);
             } else {
@@ -248,6 +272,8 @@ public class SongMatcher {
             // shorter is better (longer tracks tend to be remixes)
             List<Track> sortedByLength = allTracks.stream().sorted(Comparator.comparing(Track::getDurationMs)).toList();
             rating.setDurationScore(2.0d * ((allTracks.size() - sortedByLength.indexOf(track)) / (1.0d * allTracks.size())));
+
+            // TODO: maybe we could use trackNumber on album as a ranking part?
 
             if (isLive(track)) {
                 rating.setLiveScore(-2.0d);
@@ -266,8 +292,15 @@ public class SongMatcher {
                 rating.setReleaseDateScore(2d);
             } else if (deltaYears > -4 && deltaYears < -1) {
                 rating.setReleaseDateScore(1d);
-            } else if (Math.abs(deltaYears) > 10) {
+            } else if (deltaYears > 1 || Math.abs(deltaYears) > 10) {
                 rating.setReleaseDateScore(-1d);
+            }
+
+            // usually singles are in the first 7 tracks, so boost that
+            if (track.getTrackNumber() <= 3) {
+                rating.setTrackNumberScore(2d);
+            } else if (track.getTrackNumber() <= 7) {
+                rating.setTrackNumberScore(1d);
             }
 
             ratings.put(track, rating);
@@ -363,6 +396,8 @@ public class SongMatcher {
 
         double durationScore;
 
+        double trackNumberScore;
+
         @NonNull
         final Track track;
 
@@ -386,7 +421,8 @@ public class SongMatcher {
                             getPopularityScore(),
                             getRankingScore(),
                             getReleaseDateScore(),
-                            getDurationScore()
+                            getDurationScore(),
+                            getTrackNumberScore()
                     ).reduce(Double::sum)
                     .orElseThrow();
         }
