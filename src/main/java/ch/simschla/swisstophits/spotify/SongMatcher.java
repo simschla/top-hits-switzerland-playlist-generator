@@ -31,12 +31,16 @@ public class SongMatcher {
     public Optional<Track> selectBestMatchingTrack(List<Track> tracks) {
 
         RatingCalculator ratingCalculator = new RatingCalculator(tracks);
-        List<Rating> ratings = ratingCalculator.sortedRatings(18d);
+        List<Rating> ratings = ratingCalculator.sortedRatings(21.5d);
         if (ratings.isEmpty()) {
-            LOGGER.debug("--> no match in limit. Max 5: {}", ratingCalculator.sortedRatings(0d).stream().limit(5).map(Object::toString).collect(Collectors.joining("\n\n")));
+            LOGGER.info("--> no match in limit. Max 5: {}", ratingCalculator.sortedRatings(0d).stream().limit(5).map(Object::toString).collect(Collectors.joining("\n\n")));
             return Optional.empty();
         }
         LOGGER.info("Rating of {} for {}.", ratings.get(0), songToLookFor.toShortDesc());
+        if (songToLookFor.getSong().equals("Take Control")) {
+            LOGGER.info("--> First 10 were: {}", ratingCalculator.sortedRatings(0d).stream().limit(10).map(Object::toString).collect(Collectors.joining("\n\n")));
+
+        }
         LOGGER.debug("--> First 5 were: {}", ratingCalculator.sortedRatings(0d).stream().limit(5).map(Object::toString).collect(Collectors.joining("\n\n")));
         return Optional.of(ratings.get(0).getTrack());
     }
@@ -58,11 +62,20 @@ public class SongMatcher {
     }
 
     private boolean isRemix(Track track) {
-        return trackNameContainsButNotSongToLookFor(track, "mix") || trackNameContainsButNotSongToLookFor(track, "dub");
+        return (trackNameContainsButNotSongToLookFor(track, "mix") && !trackNameContainsButNotSongToLookFor(track, "radio mix")) ||
+                trackNameContainsButNotSongToLookFor(track, "remix") ||
+                trackNameContainsButNotSongToLookFor(track, "megamix") ||
+                trackNameContainsButNotSongToLookFor(track, "reloaded") ||
+                trackNameContainsButNotSongToLookFor(track, "dub") ||
+                trackNameContainsButNotSongToLookFor(track, "new version");
+    }
+
+    private boolean isRadioVersion(Track track) {
+        return !isRemix(track) && (trackNameContainsButNotSongToLookFor(track, "radio edit") || trackNameContainsButNotSongToLookFor(track, "radio version") || trackNameContainsButNotSongToLookFor(track, "radio mix"));
     }
 
     private boolean trackNameContainsButNotSongToLookFor(Track track, String searchString) {
-        return containsWord(track.getName().toLowerCase(), searchString.toLowerCase()) && !containsWord(songToLookFor.getSong().toLowerCase(), searchString.toLowerCase());
+        return containsWord((track.getName() + " " + track.getAlbum().getName()).toLowerCase(), searchString.toLowerCase()) && !containsWord(songToLookFor.getSong().toLowerCase(), searchString.toLowerCase());
     }
 
     private boolean isLive(Track track) {
@@ -226,24 +239,34 @@ public class SongMatcher {
                 rating.setArtistNamesScore(-5d);
             }
 
-            rating.setPopularityScore(track.getPopularity() * 5d / allTracks.stream().map(Track::getPopularity).max(Comparator.naturalOrder()).orElseThrow());
+            rating.setPopularityScore(track.getPopularity() * 5d / allTracks.stream().mapToDouble(Track::getPopularity).max().orElseThrow());
 
-            // shorter is better, reduce to parts of a minute
-            rating.setDurationScore(0.5d * ((allTracks.stream().map(Track::getDurationMs).max(Comparator.naturalOrder()).orElseThrow() - track.getDurationMs()) / 1000d / 60d));
+            // rely on upstream ranking
+
+            rating.setRankingScore(5.0d * ((allTracks.size() - allTracks.indexOf(track)) / (1.0d * allTracks.size())));
+
+            // shorter is better (longer tracks tend to be remixes)
+            List<Track> sortedByLength = allTracks.stream().sorted(Comparator.comparing(Track::getDurationMs)).toList();
+            rating.setDurationScore(2.0d * ((allTracks.size() - sortedByLength.indexOf(track)) / (1.0d * allTracks.size())));
+//            rating.setDurationScore(0.5d * ((allTracks.stream().mapToDouble(Track::getDurationMs).max().orElseThrow() - track.getDurationMs()) / 1000d / 60d));
 
             if (isLive(track)) {
                 rating.setLiveScore(-2.0d);
             }
             if (isRemix(track)) {
-                rating.setLiveScore(-2.0d);
+                rating.setRemixScore(-2.0d);
+            }
+
+            if (isRadioVersion(track)) {
+                rating.setRadioVersionScore(2.0d);
             }
 
             // below zero here means better, but to far away from chart year is probably remix or re-recorded or birthday version
             int deltaYears = releaseDelta(track.getAlbum().getReleaseDate());
             if (deltaYears == 1 || deltaYears == 0 || deltaYears == -1) {
-                rating.setReleaseDateScore(5d);
+                rating.setReleaseDateScore(2d);
             } else if (deltaYears > -4 && deltaYears < -1) {
-                rating.setReleaseDateScore(2.5d);
+                rating.setReleaseDateScore(1d);
             } else if (Math.abs(deltaYears) > 10) {
                 rating.setReleaseDateScore(-1d);
             }
@@ -331,7 +354,11 @@ public class SongMatcher {
 
         double liveScore;
 
+        double radioVersionScore;
+
         double popularityScore;
+
+        double rankingScore;
 
         double releaseDateScore;
 
@@ -356,7 +383,9 @@ public class SongMatcher {
                             getArtistCountScore(),
                             getRemixScore(),
                             getLiveScore(),
+                            getRadioVersionScore(),
                             getPopularityScore(),
+                            getRankingScore(),
                             getReleaseDateScore(),
                             getDurationScore()
                     ).reduce(Double::sum)
