@@ -65,8 +65,10 @@ public class ListManager {
                     .build()
                     .execute();
             getPlaylists().add(playlist); // remember for next time
+            // grace period
+            Thread.sleep(2000);
             return playlist;
-        } catch (IOException | SpotifyWebApiException | ParseException e) {
+        } catch (IOException | SpotifyWebApiException | ParseException | InterruptedException e) {
             throw new SpotifyException(e);
         }
 

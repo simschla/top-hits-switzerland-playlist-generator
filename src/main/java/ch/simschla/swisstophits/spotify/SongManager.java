@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
+import se.michaelthelin.spotify.exceptions.detailed.NotFoundException;
 import se.michaelthelin.spotify.model_objects.special.SnapshotResult;
 import se.michaelthelin.spotify.model_objects.specification.Paging;
 import se.michaelthelin.spotify.model_objects.specification.Playlist;
@@ -129,20 +130,26 @@ public class SongManager {
             LOGGER.info("DRY-RUN. Not fetching current state from playlist {}", playlist.getName());
             return Collections.emptyList();
         }
-        final int fetchSize = 50;
-        int offset = 0;
-        final List<PlaylistTrack> tracks = new ArrayList<>(fetchSize);
-        Paging<PlaylistTrack> cur;
-        do {
-            cur = spotifyApi.getPlaylistsItems(playlist.getId())
-                    .limit(50)
-                    .offset(offset)
-                    .build()
-                    .execute();
-            tracks.addAll(Arrays.asList(cur.getItems()));
-            offset += fetchSize;
-        } while (cur.getNext() != null);
-        return tracks;
+        try {
+            final int fetchSize = 50;
+            int offset = 0;
+            final List<PlaylistTrack> tracks = new ArrayList<>(fetchSize);
+            Paging<PlaylistTrack> cur;
+            do {
+                cur = spotifyApi.getPlaylistsItems(playlist.getId())
+                        .limit(50)
+                        .offset(offset)
+                        .build()
+                        .execute();
+                tracks.addAll(Arrays.asList(cur.getItems()));
+                offset += fetchSize;
+            } while (cur.getNext() != null);
+            return tracks;
+        } catch (NotFoundException e) {
+            // can happen if playlist has just been created, so it is probably empty anyway
+            LOGGER.info("Could not find tracks for {}. Ignoring since that means it is empty anyway!", this.playlist);
+            return Collections.emptyList();
+        }
     }
 
     private void deleteCurrentTracks(List<PlaylistTrack> tracks) throws IOException, ParseException, SpotifyWebApiException {
