@@ -50,8 +50,9 @@ public class SongSearcher {
     private static String searchString(@NonNull SongInfo songInfo) {
         return Normalizer.normalize(
                         Stream.of(
-                                        Stream.of(songInfo.getSong()),
-                                        replaceSpecialArtists(songInfo)//,
+                                        Stream.of("track:" + songInfo.getSong()),
+                                        replaceSpecialArtists(songInfo).map(artist -> "artist:" + artist),
+                                        Stream.of("year:" + (songInfo.getChartYear() - 1) + "-" + (songInfo.getChartYear()))
 //                                        Stream.of(String.valueOf(songInfo.getChartYear()))
                                 )
                                 .flatMap(s -> s)
