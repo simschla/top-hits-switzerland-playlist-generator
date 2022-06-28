@@ -25,10 +25,10 @@ public class ListManager {
 
     public static final String TARGET_LIST_NAME_PREFIX = "Top Hits Schweiz";
 
-    public static final Pattern TARGET_LIST_NAME_PATTERN = Pattern.compile("^\\Q" + TARGET_LIST_NAME_PREFIX + "\\E (197\\d|198\\d|199\\d|20\\d\\d)$");
+    public static final Pattern TARGET_LIST_NAME_PATTERN = Pattern.compile("^\\Q" + TARGET_LIST_NAME_PREFIX + "\\E (196[89]|19[789]\\d|20\\d\\d)$");
 
     public static final String TARGET_LIST_DESCRIPTION_PREFIX = "Die grössten Hits der Schweizer Hitparade aus dem Jahr";
-    public static final String TARGET_LIST_DESCRIPTION_SUFFIX = "(Rohdaten von hitparade.ch, Foto von XY)";
+    public static final String TARGET_LIST_DESCRIPTION_SUFFIX = "(Credits: Daten von hitparade.ch, Cover via spotlistr.com,  Foto von XY)";
     @NonNull
     private final SpotifyApi spotifyApi;
 
