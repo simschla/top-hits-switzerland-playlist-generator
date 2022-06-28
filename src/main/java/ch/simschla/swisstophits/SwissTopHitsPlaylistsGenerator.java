@@ -15,6 +15,9 @@ import se.michaelthelin.spotify.model_objects.specification.Playlist;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 public class SwissTopHitsPlaylistsGenerator {
@@ -41,10 +44,30 @@ public class SwissTopHitsPlaylistsGenerator {
     }
 
     private void generate() {
-        // 2003/2004
-        IntStream.of(1994)//, 2003)
-//        IntStream.range(1968, LocalDate.now().getYear() - 1)
-                .forEach(this::generate);
+        // 1994/2003/2004
+        String specificYears = System.getProperty("years");
+        String rangeValueLowerBound = System.getProperty("fromYear", "1968");
+        String rangeValueUpperBound = System.getProperty("toYear", String.valueOf(LocalDate.now().getYear()));
+
+        IntStream yearsStream;
+        if (specificYears != null) {
+            yearsStream = IntStream.of(parseYears(specificYears));
+        } else {
+            yearsStream = IntStream.range(Integer.parseInt(rangeValueLowerBound), Integer.parseInt(rangeValueUpperBound));
+        }
+        int[] years = yearsStream.toArray();
+        LOGGER.info("Fetching / Creating charts for {}", Arrays.toString(years));
+        for (int year : years) {
+            generate(year);
+        }
+    }
+
+    private int[] parseYears(String specificYears) {
+        return Arrays.stream(specificYears.split(","))
+                .map(String::trim)
+                .filter(Predicate.not(String::isEmpty))
+                .mapToInt(Integer::parseInt)
+                .toArray();
     }
 
     private void generate(int year) {
