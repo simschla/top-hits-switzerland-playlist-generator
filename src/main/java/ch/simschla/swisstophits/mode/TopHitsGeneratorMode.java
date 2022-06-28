@@ -10,7 +10,7 @@ public class TopHitsGeneratorMode {
     private TopHitsGeneratorMode() {
     }
 
-    boolean isDryRunEnabled = true;
+    boolean isDryRunEnabled = Boolean.parseBoolean(System.getProperty("dryRun", "true"));
 
     boolean isNormalizeEnabled = false;
 }
