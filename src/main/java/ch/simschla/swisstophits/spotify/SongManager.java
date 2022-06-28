@@ -12,20 +12,27 @@ import org.slf4j.LoggerFactory;
 import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
 import se.michaelthelin.spotify.model_objects.special.SnapshotResult;
-import se.michaelthelin.spotify.model_objects.specification.*;
+import se.michaelthelin.spotify.model_objects.specification.Paging;
+import se.michaelthelin.spotify.model_objects.specification.Playlist;
+import se.michaelthelin.spotify.model_objects.specification.PlaylistTrack;
+import se.michaelthelin.spotify.model_objects.specification.Track;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+
+import static java.nio.file.StandardOpenOption.*;
 
 public class SongManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SongManager.class);
 
     private static final SongMatchingResultPrinter MATCHING_RESULT_PRINTER = new SongMatchingResultPrinter();
-    
+
     private final SpotifyApi spotifyApi;
     private final Playlist playlist;
 
@@ -97,6 +104,18 @@ public class SongManager {
     private void printMatchResult(ChartInfo chartInfo, List<Track> tracks) {
         String table = MATCHING_RESULT_PRINTER.printMatchTable(chartInfo, tracks);
         LOGGER.info("Match Results for year {}:\n{}", chartInfo.getChartYear(), table);
+        writeToFile(chartInfo, table);
+    }
+
+    private void writeToFile(ChartInfo chartInfo, String table) {
+        String print = "# Spotify matches for charts *" + chartInfo.getChartYear() + "*\n\n" + table;
+        Path path = Paths.get("matching-results", "spotify", chartInfo.getChartYear() + ".md");
+        path.toFile().getParentFile().mkdirs();
+        try {
+            Files.writeString(path, print, CREATE, WRITE, TRUNCATE_EXISTING);
+        } catch (IOException e) {
+            throw new SpotifyException(e);
+        }
     }
 
     @NonNull

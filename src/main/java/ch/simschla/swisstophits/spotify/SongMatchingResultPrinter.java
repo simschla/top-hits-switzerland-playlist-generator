@@ -36,32 +36,31 @@ public class SongMatchingResultPrinter {
 
 
         // print header
-        int tableLength = 6 /* pos */ + maxLengthMatch + 2 + 3 /* sep */ + maxLengthSong + 2;
-
         final StringBuilder table = new StringBuilder();
-        table.append(repeat("=", tableLength))
-                .append("\n");
         table.append("| ")
-                .append(String.format("%3s", "#"))
+                .append(String.format("%4s", "#"))
                 .append(" | ")
                 .append(String.format("%-" + maxLengthSong + "s", "Charts-Info"))
                 .append(" | ")
                 .append(String.format("%-" + maxLengthMatch + "s", "Spotify Match"))
                 .append(" |\n");
-        table.append(repeat("=", tableLength))
-                .append("\n");
+        table.append("| ")
+                .append("---:")
+                .append(" | ")
+                .append(":" + repeat("-", maxLengthSong - 1))
+                .append(" | ")
+                .append(":" + repeat("-", maxLengthMatch - 1))
+                .append(" |\n");
 
         int pos = 1;
         for (Map.Entry<String, String> entry : matchResults.entrySet()) {
             table.append("| ")
-                    .append(String.format("%3d", pos++))
+                    .append(String.format("%4d", pos++))
                     .append(" | ")
                     .append(String.format("%-" + maxLengthSong + "s", entry.getKey()))
                     .append(" | ")
                     .append(String.format("%-" + maxLengthMatch + "s", entry.getValue()))
                     .append(" |\n");
-            table.append(repeat("-", tableLength))
-                    .append("\n");
         }
 
         return table.toString();
