@@ -1,17 +1,16 @@
 package ch.simschla.swisstophits.mode;
 
+import lombok.Data;
 
-public enum TopHitsGeneratorMode {
+@Data
+public class TopHitsGeneratorMode {
 
-    INSTANCE;
+    public static final TopHitsGeneratorMode INSTANCE = new TopHitsGeneratorMode();
 
-    boolean dryRun = true;
-
-    public boolean dryRun() {
-        return dryRun;
+    private TopHitsGeneratorMode() {
     }
 
-    public void setDryRun(boolean dryRun) {
-        this.dryRun = dryRun;
-    }
+    boolean isDryRunEnabled = true;
+
+    boolean isNormalizeEnabled = false;
 }

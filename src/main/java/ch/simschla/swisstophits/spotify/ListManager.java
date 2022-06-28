@@ -48,7 +48,7 @@ public class ListManager {
     }
 
     public Playlist createPlaylist(@NonNull Integer year) {
-        if (TopHitsGeneratorMode.INSTANCE.dryRun()) {
+        if (TopHitsGeneratorMode.INSTANCE.isDryRunEnabled()) {
             LOGGER.info("DRY-RUN. Not creating playlist {}", year);
             return new Playlist.Builder().setId(UUID.randomUUID().toString()).setName(nameForYear(year)).build();
         }

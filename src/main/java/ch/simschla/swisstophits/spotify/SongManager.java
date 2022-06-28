@@ -162,7 +162,7 @@ public class SongManager {
     }
 
     private List<PlaylistTrack> fetchAllTracks() throws IOException, ParseException, SpotifyWebApiException {
-        if (TopHitsGeneratorMode.INSTANCE.dryRun()) {
+        if (TopHitsGeneratorMode.INSTANCE.isDryRunEnabled()) {
             LOGGER.info("DRY-RUN. Not fetching current state from playlist {}", playlist.getName());
             return Collections.emptyList();
         }
@@ -183,7 +183,7 @@ public class SongManager {
     }
 
     private void deleteCurrentTracks(List<PlaylistTrack> tracks) throws IOException, ParseException, SpotifyWebApiException {
-        if (TopHitsGeneratorMode.INSTANCE.dryRun()) {
+        if (TopHitsGeneratorMode.INSTANCE.isDryRunEnabled()) {
             LOGGER.info("DRY-RUN. Not deleting from playlist {}", playlist.getName());
             return;
         }
@@ -204,7 +204,7 @@ public class SongManager {
     }
 
     private void setToPlaylist(List<Track> tracks) throws IOException, ParseException, SpotifyWebApiException {
-        if (TopHitsGeneratorMode.INSTANCE.dryRun()) {
+        if (TopHitsGeneratorMode.INSTANCE.isDryRunEnabled()) {
             LOGGER.info("DRY-RUN. Not saving to playlist {}", playlist.getName());
             return;
         }
