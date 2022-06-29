@@ -79,11 +79,17 @@ public class ListManager {
             final int fetchSize = 50;
             List<Playlist> playlists = new ArrayList<>(fetchSize);
             Paging<PlaylistSimplified> lastResult;
+            int offset = 0;
             do {
-                lastResult = this.spotifyApi.getListOfCurrentUsersPlaylists().limit(50).build().execute();
+                lastResult = this.spotifyApi.getListOfCurrentUsersPlaylists()
+                        .limit(50)
+                        .offset(offset)
+                        .build()
+                        .execute();
                 Arrays.stream(lastResult.getItems())
                         .map(this::fetchPlaylist)
                         .forEachOrdered(playlists::add);
+                offset += fetchSize;
             } while (lastResult.getNext() != null);
             return playlists;
         } catch (IOException | ParseException | SpotifyWebApiException e) {
