@@ -1,7 +1,11 @@
 package ch.simschla.swisstophits.model;
 
 import java.util.List;
-import lombok.*;
+import lombok.Builder;
+import lombok.NonNull;
+import lombok.Singular;
+import lombok.Value;
+import lombok.With;
 
 @Value
 @Builder
