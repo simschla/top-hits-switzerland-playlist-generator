@@ -1,6 +1,7 @@
 package ch.simschla.swisstophits.spotify;
 
 import ch.simschla.swisstophits.model.SongInfo;
+import ch.simschla.swisstophits.spotify.SongSearchResult.SongMatchPriority;
 import com.neovisionaries.i18n.CountryCode;
 import java.io.IOException;
 import java.text.Normalizer;
@@ -32,56 +33,63 @@ public class SongSearcher {
         this.spotifyApi = spotifyApi;
     }
 
-    public List<Track> search(@NonNull SongInfo songInfo) {
+    public SongSearchResult search(@NonNull SongInfo songInfo) {
+        SongSearchResult searchResult = new SongSearchResult();
+        // EXACT_MATCH
         final String searchString = searchString(songInfo);
         LOGGER.info("({}) Searching with '{}' for {}", songInfo.getPosition(), searchString, songInfo.toShortDesc());
-        List<Track> tracks = search(searchString);
-        if (tracks.isEmpty()) {
-            final String searchStringWithoutArtistTags = searchStringWithoutArtistTags(songInfo);
-            LOGGER.info(
-                    "({}) Nothing found -- Searching with '{}' for {}",
-                    songInfo.getPosition(),
-                    searchStringWithoutArtistTags,
-                    songInfo.toShortDesc());
-            tracks = search(searchStringWithoutArtistTags);
-        }
-        if (tracks.isEmpty()) {
-            final String searchStringWithoutYearTag = searchStringWithoutYearTag(songInfo);
-            LOGGER.info(
-                    "({}) Nothing found (2) -- Searching with '{}' for {}",
-                    songInfo.getPosition(),
-                    searchStringWithoutYearTag,
-                    songInfo.toShortDesc());
-            tracks = search(searchStringWithoutYearTag);
-        }
-        if (tracks.isEmpty()) {
-            final String searchStringWithoutYearAndArtistTags = searchStringWithoutYearAndArtistTags(songInfo);
-            LOGGER.info(
-                    "({}) Nothing found (3) -- Searching with '{}' for {}",
-                    songInfo.getPosition(),
-                    searchStringWithoutYearAndArtistTags,
-                    songInfo.toShortDesc());
-            tracks = search(searchStringWithoutYearAndArtistTags);
-        }
-        if (tracks.isEmpty()) {
-            final String searchStringWithoutTrackAndArtistTags = searchStringWithoutTrackAndArtistTags(songInfo);
-            LOGGER.info(
-                    "({}) Nothing found (4) -- Searching with '{}' for {}",
-                    songInfo.getPosition(),
-                    searchStringWithoutTrackAndArtistTags,
-                    songInfo.toShortDesc());
-            tracks = search(searchStringWithoutTrackAndArtistTags);
-        }
-        if (tracks.isEmpty()) {
-            final String searchStringWithoutTags = searchStringWithoutTags(songInfo);
-            LOGGER.info(
-                    "({}) Nothing found (5) -- Searching with '{}' for {}",
-                    songInfo.getPosition(),
-                    searchStringWithoutTags,
-                    songInfo.toShortDesc());
-            tracks = search(searchStringWithoutTags);
-        }
-        return tracks;
+        searchResult.add(SongMatchPriority.EXACT_MATCH, search(searchString));
+
+        // MATCH_WITHOUT_ARTIST_TAGS
+        final String searchStringWithoutArtistTags = searchStringWithoutArtistTags(songInfo);
+        LOGGER.info(
+                "({}) Searching with '{}' for {}",
+                songInfo.getPosition(),
+                searchStringWithoutArtistTags,
+                songInfo.toShortDesc());
+        searchResult.add(SongMatchPriority.MATCH_WITHOUT_ARTIST_TAGS, search(searchStringWithoutArtistTags));
+
+        // MATCH_WITHOUT_YEAR_TAG
+        final String searchStringWithoutYearTag = searchStringWithoutYearTag(songInfo);
+        LOGGER.info(
+                "({}) Searching with '{}' for {}",
+                songInfo.getPosition(),
+                searchStringWithoutYearTag,
+                songInfo.toShortDesc());
+        searchResult.add(SongMatchPriority.MATCH_WITHOUT_YEAR_TAG, search(searchStringWithoutYearTag));
+
+        // MATCH_WITHOUT_YEAR_AND_ARTIST_TAGS
+        final String searchStringWithoutYearAndArtistTags = searchStringWithoutYearAndArtistTags(songInfo);
+        LOGGER.info(
+                "({}) Searching with '{}' for {}",
+                songInfo.getPosition(),
+                searchStringWithoutYearAndArtistTags,
+                songInfo.toShortDesc());
+        searchResult.add(
+                SongMatchPriority.MATCH_WITHOUT_YEAR_AND_ARTIST_TAGS, search(searchStringWithoutYearAndArtistTags));
+
+        // MATCH_WITHOUT_TRACK_AND_ARTIST_TAGS
+        final String searchStringWithoutTrackAndArtistTags = searchStringWithoutTrackAndArtistTags(songInfo);
+        LOGGER.info(
+                "({}) Searching with '{}' for {}",
+                songInfo.getPosition(),
+                searchStringWithoutTrackAndArtistTags,
+                songInfo.toShortDesc());
+        searchResult.add(
+                SongMatchPriority.MATCH_WITHOUT_TRACK_AND_ARTIST_TAGS, search(searchStringWithoutTrackAndArtistTags));
+
+        // MATCH_WITHOUT_TAGS
+        final String searchStringWithoutTags = searchStringWithoutTags(songInfo);
+        LOGGER.info(
+                "({}) Searching with '{}' for {}",
+                songInfo.getPosition(),
+                searchStringWithoutTags,
+                songInfo.toShortDesc());
+        searchResult.add(SongMatchPriority.MATCH_WITHOUT_TAGS, search(searchStringWithoutTags));
+
+        LOGGER.debug("({}) Found results for {}: {}", songInfo.getPosition(), songInfo.toShortDesc(), searchResult.getTrackCountPerPriorityString());
+
+        return searchResult;
     }
 
     private List<Track> search(@NonNull String searchString) {

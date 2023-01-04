@@ -90,7 +90,7 @@ public class SongManager {
         for (SongInfo chartSong : chartInfo.getChartSongs()) {
             LOGGER.debug("Searching for song: {}", chartSong);
 
-            List<Track> tracks = searcher.search(chartSong);
+            SongSearchResult tracks = searcher.search(chartSong);
             if (tracks.isEmpty()) {
                 LOGGER.warn("Could not find any track matching {} -- skipping.", chartSong);
                 foundTracks.add(null);
@@ -104,11 +104,11 @@ public class SongManager {
                 continue;
             }
             LOGGER.debug("Using {} for {}.", track.get(), chartSong);
-            LOGGER.debug(
-                    "First 5: {}",
-                    tracks.subList(0, Math.min(5, tracks.size())).stream()
-                            .map(t -> "\n- " + t)
-                            .collect(Collectors.joining("\n")));
+//            LOGGER.debug(
+//                    "First 5 per priority: {}",
+//                    tracks.subList(0, Math.min(5, tracks.size())).stream()
+//                            .map(t -> "\n- " + t)
+//                            .collect(Collectors.joining("\n")));
             foundTracks.add(track.get());
         }
     }
@@ -131,9 +131,13 @@ public class SongManager {
     }
 
     @NonNull
-    private Optional<Track> selectTrack(SongInfo chartSong, List<Track> tracks) {
+    private Optional<Track> selectTrack(SongInfo chartSong, SongSearchResult tracks) {
         SongMatcher songMatcher = new SongMatcher(chartSong);
-        return songMatcher.selectBestMatchingTrack(tracks);
+        return tracks.resultStream()
+                .map(songMatcher::selectBestMatchingTrack)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     private List<PlaylistTrack> fetchAllTracks() throws IOException, ParseException, SpotifyWebApiException {
