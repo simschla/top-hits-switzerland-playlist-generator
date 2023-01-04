@@ -4,13 +4,12 @@ import ch.simschla.swisstophits.scraper.pages.PageObjectElement;
 import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlBold;
 import com.gargoylesoftware.htmlunit.html.HtmlDivision;
-import lombok.NonNull;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Objects;
+import lombok.NonNull;
 
 public class Top50ChartsElement implements PageObjectElement {
 
@@ -28,7 +27,6 @@ public class Top50ChartsElement implements PageObjectElement {
     public static Top50ChartsElement onPage(@NonNull Top50Page top50Page, @NonNull HtmlDivision div) {
         return new Top50ChartsElement(top50Page, div);
     }
-
 
     public Boolean isSwissAct() {
         return element.getFirstByXPath(".//img[contains(@src, 'swiss')]") != null;
@@ -52,7 +50,8 @@ public class Top50ChartsElement implements PageObjectElement {
     }
 
     private Collection<String> parseArtists(String artistsText) {
-        return Arrays.stream(artistsText.split(",\\s|\\s&\\s|\\s\\+\\s| / | feat. | featuring | Feat. | Featuring | and | und |\\sx\\s"))
+        return Arrays.stream(artistsText.split(
+                        ",\\s|\\s&\\s|\\s\\+\\s| / | feat. | featuring | Feat. | Featuring | and | und |\\sx\\s"))
                 .filter(Objects::nonNull)
                 .map(String::trim)
                 .map(s -> s.length() == 0 ? null : s)

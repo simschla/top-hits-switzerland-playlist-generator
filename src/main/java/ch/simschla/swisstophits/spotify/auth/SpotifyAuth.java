@@ -1,16 +1,5 @@
 package ch.simschla.swisstophits.spotify.auth;
 
-import lombok.NonNull;
-import org.apache.hc.core5.http.ParseException;
-import se.michaelthelin.spotify.SpotifyApi;
-import se.michaelthelin.spotify.enums.AuthorizationScope;
-import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
-import se.michaelthelin.spotify.model_objects.credentials.AuthorizationCodeCredentials;
-import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeUriRequest;
-import se.michaelthelin.spotify.requests.authorization.authorization_code.pkce.AuthorizationCodePKCERefreshRequest;
-import se.michaelthelin.spotify.requests.authorization.authorization_code.pkce.AuthorizationCodePKCERequest;
-import spark.Spark;
-
 import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
@@ -22,6 +11,16 @@ import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import lombok.NonNull;
+import org.apache.hc.core5.http.ParseException;
+import se.michaelthelin.spotify.SpotifyApi;
+import se.michaelthelin.spotify.enums.AuthorizationScope;
+import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
+import se.michaelthelin.spotify.model_objects.credentials.AuthorizationCodeCredentials;
+import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeUriRequest;
+import se.michaelthelin.spotify.requests.authorization.authorization_code.pkce.AuthorizationCodePKCERefreshRequest;
+import se.michaelthelin.spotify.requests.authorization.authorization_code.pkce.AuthorizationCodePKCERequest;
+import spark.Spark;
 
 public class SpotifyAuth {
 
@@ -30,7 +29,6 @@ public class SpotifyAuth {
     public SpotifyAuth() {
         this.authPersist = SpotifyAuthPersist.open();
     }
-
 
     public void authorized(SpotifyApi spotifyApi) {
         if (authPersist.hasValidAccessToken()) {
@@ -54,7 +52,8 @@ public class SpotifyAuth {
 
     private void refreshAccessToken(@NonNull SpotifyApi spotifyApi) {
         try {
-            AuthorizationCodePKCERefreshRequest pkceRefreshRequest = spotifyApi.authorizationCodePKCERefresh().build();
+            AuthorizationCodePKCERefreshRequest pkceRefreshRequest =
+                    spotifyApi.authorizationCodePKCERefresh().build();
             final AuthorizationCodeCredentials authorizationCodeCredentials = pkceRefreshRequest.execute();
             rememberCredentials(authorizationCodeCredentials);
         } catch (IOException | SpotifyWebApiException | ParseException e) {
@@ -70,26 +69,31 @@ public class SpotifyAuth {
 
     private void requestAccess(@NonNull SpotifyApi spotifyApi) {
         try {
-            final String codeVerifier = UUID.randomUUID().toString() + UUID.randomUUID().toString();
+            final String codeVerifier =
+                    UUID.randomUUID().toString() + UUID.randomUUID().toString();
 
             String codeChallenge = createCodeChallenge(codeVerifier);
 
             final String code = requestCodeAuthorizedByUser(spotifyApi, codeChallenge);
 
-            final AuthorizationCodePKCERequest authorizationCodePKCERequest = spotifyApi
-                    .authorizationCodePKCE(code, codeVerifier)
-                    .build();
+            final AuthorizationCodePKCERequest authorizationCodePKCERequest =
+                    spotifyApi.authorizationCodePKCE(code, codeVerifier).build();
 
             AuthorizationCodeCredentials authorizationCodeCredentials = authorizationCodePKCERequest.execute();
             rememberCredentials(authorizationCodeCredentials);
-        } catch (NoSuchAlgorithmException | IOException | InterruptedException | SpotifyWebApiException |
-                 ParseException e) {
+        } catch (NoSuchAlgorithmException
+                | IOException
+                | InterruptedException
+                | SpotifyWebApiException
+                | ParseException e) {
             throw new SpotifyAuthException(e);
         }
     }
 
-    private String requestCodeAuthorizedByUser(SpotifyApi spotifyApi, String codeChallenge) throws IOException, InterruptedException {
-        AuthorizationCodeUriRequest authorizationCodeUriRequest = spotifyApi.authorizationCodePKCEUri(codeChallenge)
+    private String requestCodeAuthorizedByUser(SpotifyApi spotifyApi, String codeChallenge)
+            throws IOException, InterruptedException {
+        AuthorizationCodeUriRequest authorizationCodeUriRequest = spotifyApi
+                .authorizationCodePKCEUri(codeChallenge)
                 .scope(AuthorizationScope.PLAYLIST_MODIFY_PUBLIC)
                 .build();
 
@@ -112,14 +116,14 @@ public class SpotifyAuth {
 
     private String createCodeChallenge(String codeVerifier) throws NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] encodedhash = digest.digest(
-                codeVerifier.getBytes(StandardCharsets.UTF_8));
+        byte[] encodedhash = digest.digest(codeVerifier.getBytes(StandardCharsets.UTF_8));
 
         String codeChallenge = Base64.getUrlEncoder().withoutPadding().encodeToString(encodedhash);
         return codeChallenge;
     }
 
-    public static void main(String[] args) throws URISyntaxException, NoSuchAlgorithmException, IOException, InterruptedException {
+    public static void main(String[] args)
+            throws URISyntaxException, NoSuchAlgorithmException, IOException, InterruptedException {
 
         final SpotifyApi spotifyApi = new SpotifyApi.Builder()
                 .setClientId(System.getProperty("spotify.client_id"))
@@ -130,10 +134,6 @@ public class SpotifyAuth {
         SpotifyAuth auth = new SpotifyAuth();
         auth.authorized(spotifyApi);
 
-
         System.out.println("accessToken: " + auth.authPersist.accessToken());
-
     }
-
-
 }

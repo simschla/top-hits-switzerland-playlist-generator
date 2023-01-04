@@ -1,9 +1,8 @@
 package ch.simschla.swisstophits.normalizer;
 
 import ch.simschla.swisstophits.model.SongInfo;
-import lombok.NonNull;
-
 import java.util.List;
+import lombok.NonNull;
 
 public class SongInfoFixerSongName implements SongInfoFixer {
 
@@ -17,7 +16,8 @@ public class SongInfoFixerSongName implements SongInfoFixer {
 
     private final String fixedSong;
 
-    public SongInfoFixerSongName(@NonNull List<String> origArtists, @NonNull String origSong, List<String> fixedArtists, String fixedSong) {
+    public SongInfoFixerSongName(
+            @NonNull List<String> origArtists, @NonNull String origSong, List<String> fixedArtists, String fixedSong) {
         this.origArtists = origArtists;
         this.origSong = origSong;
         this.fixedArtists = fixedArtists;
@@ -30,8 +30,7 @@ public class SongInfoFixerSongName implements SongInfoFixer {
             return orig;
         }
 
-        return orig
-                .withSong(fixedSong != null ? fixedSong : orig.getSong())
+        return orig.withSong(fixedSong != null ? fixedSong : orig.getSong())
                 .withArtists(fixedArtists != null ? fixedArtists : orig.getArtists());
     }
 }

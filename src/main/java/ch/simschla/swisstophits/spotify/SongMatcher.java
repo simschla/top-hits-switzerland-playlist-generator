@@ -1,17 +1,16 @@
 package ch.simschla.swisstophits.spotify;
 
-import ch.simschla.swisstophits.model.SongInfo;
-import lombok.NonNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import se.michaelthelin.spotify.model_objects.specification.Track;
+import static java.util.function.Predicate.not;
 
+import ch.simschla.swisstophits.model.SongInfo;
 import java.text.Normalizer;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static java.util.function.Predicate.not;
+import lombok.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import se.michaelthelin.spotify.model_objects.specification.Track;
 
 public class SongMatcher {
 
@@ -24,26 +23,39 @@ public class SongMatcher {
         this.songToLookFor = songToLookFor;
     }
 
-
     public Optional<Track> selectBestMatchingTrack(List<Track> tracks) {
 
         RatingCalculator ratingCalculator = new RatingCalculator(tracks);
         List<SongRating> ratings = ratingCalculator.sortedRatings(22d);
         if (ratings.isEmpty()) {
-            LOGGER.info("--> no match in limit. Max 5: {}", ratingCalculator.sortedRatings(0d).stream().limit(5).map(Object::toString).collect(Collectors.joining("\n\n")));
+            LOGGER.info(
+                    "--> no match in limit. Max 5: {}",
+                    ratingCalculator.sortedRatings(0d).stream()
+                            .limit(5)
+                            .map(Object::toString)
+                            .collect(Collectors.joining("\n\n")));
             return Optional.empty();
         }
         LOGGER.info("Rating of {} for {}.", ratings.get(0), songToLookFor.toShortDesc());
         if (songToLookFor.getSong().equals("Jenny From The Block")) {
-            LOGGER.info("--> First 10 were: {}", ratingCalculator.sortedRatings(0d).stream().limit(10).map(Object::toString).collect(Collectors.joining("\n\n")));
-
+            LOGGER.info(
+                    "--> First 10 were: {}",
+                    ratingCalculator.sortedRatings(0d).stream()
+                            .limit(10)
+                            .map(Object::toString)
+                            .collect(Collectors.joining("\n\n")));
         }
-        LOGGER.debug("--> First 5 were: {}", ratingCalculator.sortedRatings(0d).stream().limit(5).map(Object::toString).collect(Collectors.joining("\n\n")));
+        LOGGER.debug(
+                "--> First 5 were: {}",
+                ratingCalculator.sortedRatings(0d).stream()
+                        .limit(5)
+                        .map(Object::toString)
+                        .collect(Collectors.joining("\n\n")));
         return Optional.of(ratings.get(0).getTrack());
     }
 
     private boolean isBlocklisted(Track track) {
-        return matchesKaraoke(track) || isLive(track) || isInstrumental(track)/*|| isRemix(track)*/;
+        return matchesKaraoke(track) || isLive(track) || isInstrumental(track) /*|| isRemix(track)*/;
     }
 
     private boolean matchesKaraoke(Track t) {
@@ -55,7 +67,9 @@ public class SongMatcher {
         }
         return simplified(t.getName()).contains("karaoke")
                 || simplified(t.getAlbum().getName()).contains("karaoke")
-                || Arrays.stream(t.getArtists()).map(artist -> simplified(artist.getName())).anyMatch(a -> a.contains("karaoke"));
+                || Arrays.stream(t.getArtists())
+                        .map(artist -> simplified(artist.getName()))
+                        .anyMatch(a -> a.contains("karaoke"));
     }
 
     private boolean isInstrumental(Track t) {
@@ -67,20 +81,26 @@ public class SongMatcher {
     }
 
     private boolean isRemix(Track track) {
-        return (trackNameContainsButNotSongToLookFor(track, "mix") && !trackNameContainsButNotSongToLookFor(track, "radio mix")) ||
-                trackNameContainsButNotSongToLookFor(track, "remix") ||
-                trackNameContainsButNotSongToLookFor(track, "megamix") ||
-                trackNameContainsButNotSongToLookFor(track, "reloaded") ||
-                trackNameContainsButNotSongToLookFor(track, "dub") ||
-                trackNameContainsButNotSongToLookFor(track, "new version");
+        return (trackNameContainsButNotSongToLookFor(track, "mix")
+                        && !trackNameContainsButNotSongToLookFor(track, "radio mix"))
+                || trackNameContainsButNotSongToLookFor(track, "remix")
+                || trackNameContainsButNotSongToLookFor(track, "megamix")
+                || trackNameContainsButNotSongToLookFor(track, "reloaded")
+                || trackNameContainsButNotSongToLookFor(track, "dub")
+                || trackNameContainsButNotSongToLookFor(track, "new version");
     }
 
     private boolean isRadioVersion(Track track) {
-        return !isRemix(track) && (trackNameContainsButNotSongToLookFor(track, "radio edit") || trackNameContainsButNotSongToLookFor(track, "radio version") || trackNameContainsButNotSongToLookFor(track, "radio mix"));
+        return !isRemix(track)
+                && (trackNameContainsButNotSongToLookFor(track, "radio edit")
+                        || trackNameContainsButNotSongToLookFor(track, "radio version")
+                        || trackNameContainsButNotSongToLookFor(track, "radio mix"));
     }
 
     private boolean trackNameContainsButNotSongToLookFor(Track track, String searchString) {
-        return containsWord((track.getName() + " " + track.getAlbum().getName()).toLowerCase(), searchString.toLowerCase()) && !containsWord(songToLookFor.getSong().toLowerCase(), searchString.toLowerCase());
+        return containsWord(
+                        (track.getName() + " " + track.getAlbum().getName()).toLowerCase(), searchString.toLowerCase())
+                && !containsWord(songToLookFor.getSong().toLowerCase(), searchString.toLowerCase());
     }
 
     private boolean isLive(Track track) {
@@ -90,8 +110,7 @@ public class SongMatcher {
     private boolean songNameIsContainedIn(Track t) {
         String trackSongName = simplified(t.getName());
         String songToLookForName = simplified(songToLookFor.getSong());
-        return containsWord(trackSongName, songToLookForName) ||
-                containsWord(songToLookForName, trackSongName);
+        return containsWord(trackSongName, songToLookForName) || containsWord(songToLookForName, trackSongName);
     }
 
     private boolean containsWord(String s, String word) {
@@ -105,15 +124,15 @@ public class SongMatcher {
                 .filter(not(this::isIgnoredSongPart))
                 .map(this::simplified)
                 .collect(Collectors.toSet());
-        Set<String> songToLookForParts =
-                Arrays.stream(songToLookFor.getSong().split("-"))
-                        .map(String::trim)
-                        .filter(not(String::isEmpty))
-                        .filter(not(this::isIgnoredSongPart))
-                        .map(this::simplified)
-                        .collect(Collectors.toSet());
-        if (songToLookForParts.stream()
-                .anyMatch(songToLookForPart -> trackSongParts.stream().anyMatch(trackSongPart -> containsWord(trackSongPart, songToLookForPart) || containsWord(songToLookForPart, trackSongPart)))) {
+        Set<String> songToLookForParts = Arrays.stream(songToLookFor.getSong().split("-"))
+                .map(String::trim)
+                .filter(not(String::isEmpty))
+                .filter(not(this::isIgnoredSongPart))
+                .map(this::simplified)
+                .collect(Collectors.toSet());
+        if (songToLookForParts.stream().anyMatch(songToLookForPart -> trackSongParts.stream()
+                .anyMatch(trackSongPart -> containsWord(trackSongPart, songToLookForPart)
+                        || containsWord(songToLookForPart, trackSongPart)))) {
             return true;
         }
         return false;
@@ -127,13 +146,11 @@ public class SongMatcher {
         final String trackArtists = trackArtists(t) // remove fill-words
                 .collect(Collectors.joining(" "));
 
-        return songToLookForArtists()
-                .allMatch(trackArtists::contains);
+        return songToLookForArtists().allMatch(trackArtists::contains);
     }
 
     private Stream<String> songToLookForArtists() {
-        return songToLookFor.getArtists()
-                .stream()
+        return songToLookFor.getArtists().stream()
                 .map(this::replaceExceptionalArtistCases)
                 .flatMap(artistName -> Arrays.stream(artistName.split("\\s+")))
                 .map(String::trim)
@@ -155,10 +172,8 @@ public class SongMatcher {
 
     private boolean noOtherArtistNamesAreContainedIn(Track t) {
         String songArtists = songToLookForArtists().collect(Collectors.joining(" "));
-        return trackArtists(t)
-                .noneMatch(not(songArtists::contains));
+        return trackArtists(t).noneMatch(not(songArtists::contains));
     }
-
 
     private boolean anyArtistNameIsContainedIn(Track t) {
         final Set<String> trackArtists = Arrays.stream(t.getArtists())
@@ -167,8 +182,7 @@ public class SongMatcher {
                 .filter(not(this::isFillWord)) // remove fill-words
                 .collect(Collectors.toSet());
 
-        return songToLookFor.getArtists()
-                .stream()
+        return songToLookFor.getArtists().stream()
                 .map(this::replaceExceptionalArtistCases)
                 .filter(s -> s.length() > 1) // remove one-char things
                 .filter(not(this::isFillWord)) // remove fill-words
@@ -242,7 +256,7 @@ public class SongMatcher {
             rating.setBlocked(isBlocklisted(track));
             if (rating.isBlocked()) {
                 ratings.put(track, rating);
-                return; //nothing else to do
+                return; // nothing else to do
             }
 
             rating.setSongNameScore(calculateSongNameRating(track));
@@ -260,15 +274,20 @@ public class SongMatcher {
                 rating.setArtistNamesScore(-5d);
             }
 
-            rating.setPopularityScore(track.getPopularity() * 5d / allTracks.stream().mapToDouble(Track::getPopularity).max().orElseThrow());
+            rating.setPopularityScore(track.getPopularity()
+                    * 5d
+                    / allTracks.stream().mapToDouble(Track::getPopularity).max().orElseThrow());
 
             // rely on upstream ranking
 
             rating.setRankingScore(5.0d * ((allTracks.size() - allTracks.indexOf(track)) / (1.0d * allTracks.size())));
 
             // shorter is better (longer tracks tend to be remixes)
-            List<Track> sortedByLength = allTracks.stream().sorted(Comparator.comparing(Track::getDurationMs)).toList();
-            rating.setDurationScore(2.0d * ((allTracks.size() - sortedByLength.indexOf(track)) / (1.0d * allTracks.size())));
+            List<Track> sortedByLength = allTracks.stream()
+                    .sorted(Comparator.comparing(Track::getDurationMs))
+                    .toList();
+            rating.setDurationScore(
+                    2.0d * ((allTracks.size() - sortedByLength.indexOf(track)) / (1.0d * allTracks.size())));
 
             // TODO: maybe we could use trackNumber on album as a ranking part?
 
@@ -283,7 +302,8 @@ public class SongMatcher {
                 rating.setRadioVersionScore(2.0d);
             }
 
-            // below zero here means better, but to far away from chart year is probably remix or re-recorded or birthday version
+            // below zero here means better, but to far away from chart year is probably remix or re-recorded or
+            // birthday version
             int deltaYears = releaseDelta(track.getAlbum().getReleaseDate());
             if (deltaYears == 0 || deltaYears == -1) {
                 rating.setReleaseDateScore(2d);
@@ -304,9 +324,7 @@ public class SongMatcher {
         }
 
         public List<SongRating> sortedRatings(double minVal) {
-            return ratings
-                    .values()
-                    .stream()
+            return ratings.values().stream()
                     .sorted(Comparator.comparing(SongRating::getCalculatedScore).reversed())
                     .filter(r -> r.getCalculatedScore() >= minVal)
                     .toList();
@@ -318,9 +336,8 @@ public class SongMatcher {
         List<String> songToLookForParts = selectTokens(songToLookFor.getSong());
         List<String> trackNameParts = selectTokens(track.getName());
 
-        List<Integer> trackNamePositions = trackNameParts.stream()
-                .map(s -> songToLookForParts.indexOf(s))
-                .toList();
+        List<Integer> trackNamePositions =
+                trackNameParts.stream().map(s -> songToLookForParts.indexOf(s)).toList();
 
         final double pointsToGiveInTotal = 10d;
 
@@ -331,7 +348,8 @@ public class SongMatcher {
             weight *= 1.5d;
         }
 
-        Double pointPerWeight = pointsToGiveInTotal / weights.stream().mapToDouble(d -> d).sum();
+        Double pointPerWeight =
+                pointsToGiveInTotal / weights.stream().mapToDouble(d -> d).sum();
 
         double achieved = 0d;
 
@@ -351,7 +369,6 @@ public class SongMatcher {
         }
 
         return -5d;
-
     }
 
     private List<String> selectTokens(String origString) {
@@ -363,6 +380,4 @@ public class SongMatcher {
                 .distinct()
                 .toList();
     }
-
-
 }

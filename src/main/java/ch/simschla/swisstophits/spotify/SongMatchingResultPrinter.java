@@ -2,22 +2,22 @@ package ch.simschla.swisstophits.spotify;
 
 import ch.simschla.swisstophits.model.ChartInfo;
 import ch.simschla.swisstophits.model.SongInfo;
-import lombok.NonNull;
-import se.michaelthelin.spotify.model_objects.specification.ArtistSimplified;
-import se.michaelthelin.spotify.model_objects.specification.Track;
-
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import lombok.NonNull;
+import se.michaelthelin.spotify.model_objects.specification.ArtistSimplified;
+import se.michaelthelin.spotify.model_objects.specification.Track;
 
 public class SongMatchingResultPrinter {
 
     public String printMatchTable(@NonNull ChartInfo chartInfo, @NonNull List<Track> tracks) {
         if (chartInfo.getChartSongs().size() != tracks.size()) {
-            throw new IllegalStateException("Match results are not on par. Charts " + chartInfo.getChartSongs().size() + " elements, but tracks " + tracks.size() + " elements.");
+            throw new IllegalStateException("Match results are not on par. Charts "
+                    + chartInfo.getChartSongs().size() + " elements, but tracks " + tracks.size() + " elements.");
         }
         LinkedHashMap<String, String> matchResults = new LinkedHashMap<>();
         int maxLengthSong = 0;
@@ -33,7 +33,6 @@ public class SongMatchingResultPrinter {
             maxLengthMatch = Math.max(maxLengthMatch, trackShortDesc.length());
             maxLengthSong = Math.max(maxLengthSong, songInfoShortDesc.length());
         }
-
 
         // print header
         final StringBuilder table = new StringBuilder();
@@ -70,7 +69,12 @@ public class SongMatchingResultPrinter {
         if (track == null) {
             return "-";
         }
-        return String.format("%s %s, %s (%s)", track.getName(), Arrays.stream(track.getArtists()).map(ArtistSimplified::getName).collect(Collectors.toList()), track.getAlbum().getName(), track.getAlbum().getReleaseDate());
+        return String.format(
+                "%s %s, %s (%s)",
+                track.getName(),
+                Arrays.stream(track.getArtists()).map(ArtistSimplified::getName).collect(Collectors.toList()),
+                track.getAlbum().getName(),
+                track.getAlbum().getReleaseDate());
     }
 
     private String repeat(String s, int times) {

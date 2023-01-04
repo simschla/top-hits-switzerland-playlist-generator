@@ -1,4 +1,3 @@
 package ch.simschla.swisstophits.scraper.pages;
 
-public interface PageObjectElement {
-}
+public interface PageObjectElement {}

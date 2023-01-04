@@ -4,8 +4,7 @@ import lombok.NonNull;
 
 public class ScrapingException extends RuntimeException {
 
-    public ScrapingException() {
-    }
+    public ScrapingException() {}
 
     public ScrapingException(String message) {
         super(message);

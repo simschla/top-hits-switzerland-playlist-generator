@@ -6,6 +6,12 @@ import ch.simschla.swisstophits.scraper.ChartSongsScraper;
 import ch.simschla.swisstophits.spotify.ListManager;
 import ch.simschla.swisstophits.spotify.SongManager;
 import ch.simschla.swisstophits.spotify.auth.SpotifyAuth;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.function.Predicate;
+import java.util.stream.IntStream;
 import lombok.AccessLevel;
 import lombok.Getter;
 import org.slf4j.Logger;
@@ -13,17 +19,9 @@ import org.slf4j.LoggerFactory;
 import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.model_objects.specification.Playlist;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.function.Predicate;
-import java.util.stream.IntStream;
-
 public class SwissTopHitsPlaylistsGenerator {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SwissTopHitsPlaylistsGenerator.class);
-
 
     @Getter(lazy = true, value = AccessLevel.PRIVATE)
     private final SpotifyApi spotifyApi = createSpotifyApi();
@@ -47,13 +45,15 @@ public class SwissTopHitsPlaylistsGenerator {
         // 1994/2003/2004
         String specificYears = System.getProperty("years");
         String rangeValueLowerBound = System.getProperty("fromYear", "1968");
-        String rangeValueUpperBound = System.getProperty("toYear", String.valueOf(LocalDate.now().getYear()));
+        String rangeValueUpperBound =
+                System.getProperty("toYear", String.valueOf(LocalDate.now().getYear()));
 
         IntStream yearsStream;
         if (specificYears != null) {
             yearsStream = IntStream.of(parseYears(specificYears));
         } else {
-            yearsStream = IntStream.range(Integer.parseInt(rangeValueLowerBound), Integer.parseInt(rangeValueUpperBound));
+            yearsStream =
+                    IntStream.range(Integer.parseInt(rangeValueLowerBound), Integer.parseInt(rangeValueUpperBound));
         }
         int[] years = yearsStream.toArray();
         LOGGER.info("Fetching / Creating charts for {}", Arrays.toString(years));
@@ -86,8 +86,7 @@ public class SwissTopHitsPlaylistsGenerator {
         // assert list
         LOGGER.info("{} - asserting playlist exists", year);
         ListManager listManager = new ListManager(spotifyApi);
-        Playlist playlist = listManager.fetchPlaylist(year)
-                .orElseGet(() -> listManager.createPlaylist(year));
+        Playlist playlist = listManager.fetchPlaylist(year).orElseGet(() -> listManager.createPlaylist(year));
 
         // add songs
         LOGGER.info("{} - searching songs and updating playlist if needed", year);
@@ -99,5 +98,4 @@ public class SwissTopHitsPlaylistsGenerator {
         SwissTopHitsPlaylistsGenerator generator = new SwissTopHitsPlaylistsGenerator();
         generator.generate();
     }
-
 }

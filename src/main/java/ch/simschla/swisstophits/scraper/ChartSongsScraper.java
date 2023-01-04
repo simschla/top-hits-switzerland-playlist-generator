@@ -10,11 +10,10 @@ import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlDivision;
+import java.util.List;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
 
 public class ChartSongsScraper {
 
@@ -35,9 +34,7 @@ public class ChartSongsScraper {
 
     private ChartInfo fetchChartInfo(WebClient webClient) {
 
-        ChartInfoBuilder chartInfoBuilder = ChartInfo.builder()
-                .chartYear(year);
-
+        ChartInfoBuilder chartInfoBuilder = ChartInfo.builder().chartYear(year);
 
         Top50Page top50Page = Top50Page.openPage(webClient, year);
         List<Top50ChartsElement> chartsElements = top50Page.getChartsElements();
@@ -51,7 +48,8 @@ public class ChartSongsScraper {
         return chartInfo;
     }
 
-    private SongInfo chartSong(@NonNull Top50ChartsElement chartsElement, @NonNull Integer year, @NonNull Integer position) {
+    private SongInfo chartSong(
+            @NonNull Top50ChartsElement chartsElement, @NonNull Integer year, @NonNull Integer position) {
         SongInfoBuilder songInfoBuilder = SongInfo.builder()
                 .song(chartsElement.songName())
                 .artists(chartsElement.artists())
@@ -59,7 +57,6 @@ public class ChartSongsScraper {
                 .swissAct(chartsElement.isSwissAct())
                 .chartYear(year)
                 .position(position);
-
 
         return songInfoBuilder.build();
     }
@@ -73,13 +70,12 @@ public class ChartSongsScraper {
     private WebClient createWebClient() {
         WebClient webClient = new WebClient(BrowserVersion.CHROME);
         webClient.getOptions().setCssEnabled(false);
-//        webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
+        //        webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
         webClient.getOptions().setThrowExceptionOnScriptError(false);
         webClient.getOptions().setPrintContentOnFailingStatusCode(false);
         webClient.getOptions().setJavaScriptEnabled(false);
         return webClient;
     }
-
 
     public static void main(String[] args) {
         new ChartSongsScraper(1994).fetchChartInfo();

@@ -1,10 +1,19 @@
 package ch.simschla.swisstophits.spotify;
 
+import static java.nio.file.StandardOpenOption.*;
+
 import ch.simschla.swisstophits.mode.TopHitsGeneratorMode;
 import ch.simschla.swisstophits.model.ChartInfo;
 import ch.simschla.swisstophits.model.SongInfo;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import lombok.NonNull;
 import org.apache.hc.core5.http.ParseException;
 import org.slf4j.Logger;
@@ -17,16 +26,6 @@ import se.michaelthelin.spotify.model_objects.specification.Paging;
 import se.michaelthelin.spotify.model_objects.specification.Playlist;
 import se.michaelthelin.spotify.model_objects.specification.PlaylistTrack;
 import se.michaelthelin.spotify.model_objects.specification.Track;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-
-import static java.nio.file.StandardOpenOption.*;
 
 public class SongManager {
 
@@ -42,7 +41,6 @@ public class SongManager {
         this.playlist = playlist;
     }
 
-
     public void setTrackList(ChartInfo chartInfo, boolean forceRecreate) {
         try {
             // current state
@@ -55,7 +53,8 @@ public class SongManager {
             }
 
             // search
-            LOGGER.info("Searching {} songs for year {}.", chartInfo.getChartSongs().size(), chartInfo.getChartYear());
+            LOGGER.info(
+                    "Searching {} songs for year {}.", chartInfo.getChartSongs().size(), chartInfo.getChartYear());
             List<Track> foundTracks = new ArrayList<>(chartInfo.getChartSongs().size());
             searchChartSongs(chartInfo, foundTracks);
 
@@ -71,7 +70,8 @@ public class SongManager {
                 deleteCurrentTracks(allCurrentTracks);
             }
 
-            List<Track> tracksToSave = foundTracks.stream().filter(Objects::nonNull).toList();
+            List<Track> tracksToSave =
+                    foundTracks.stream().filter(Objects::nonNull).toList();
             setToPlaylist(tracksToSave);
         } catch (IOException | SpotifyWebApiException | ParseException e) {
             throw new SpotifyException(e);
@@ -97,7 +97,11 @@ public class SongManager {
                 continue;
             }
             LOGGER.debug("Using {} for {}.", track.get(), chartSong);
-            LOGGER.debug("First 5: {}", tracks.subList(0, Math.min(5, tracks.size())).stream().map(t -> "\n- " + t).collect(Collectors.joining("\n")));
+            LOGGER.debug(
+                    "First 5: {}",
+                    tracks.subList(0, Math.min(5, tracks.size())).stream()
+                            .map(t -> "\n- " + t)
+                            .collect(Collectors.joining("\n")));
             foundTracks.add(track.get());
         }
     }
@@ -136,7 +140,8 @@ public class SongManager {
             final List<PlaylistTrack> tracks = new ArrayList<>(fetchSize);
             Paging<PlaylistTrack> cur;
             do {
-                cur = spotifyApi.getPlaylistsItems(playlist.getId())
+                cur = spotifyApi
+                        .getPlaylistsItems(playlist.getId())
                         .limit(50)
                         .offset(offset)
                         .build()
@@ -152,7 +157,8 @@ public class SongManager {
         }
     }
 
-    private void deleteCurrentTracks(List<PlaylistTrack> tracks) throws IOException, ParseException, SpotifyWebApiException {
+    private void deleteCurrentTracks(List<PlaylistTrack> tracks)
+            throws IOException, ParseException, SpotifyWebApiException {
         if (TopHitsGeneratorMode.INSTANCE.isDryRunEnabled()) {
             LOGGER.info("DRY-RUN. Not deleting from playlist {}", playlist.getName());
             return;
@@ -167,7 +173,8 @@ public class SongManager {
                         return jsonObject;
                     })
                     .forEach(tracksArray::add);
-            SnapshotResult result = this.spotifyApi.removeItemsFromPlaylist(playlist.getId(), tracksArray)
+            SnapshotResult result = this.spotifyApi
+                    .removeItemsFromPlaylist(playlist.getId(), tracksArray)
                     .build()
                     .execute();
         });
@@ -185,13 +192,11 @@ public class SongManager {
             jsonArray.add(track.getUri());
         }
 
-        this.spotifyApi.addItemsToPlaylist(playlist.getId(), jsonArray)
-                .build()
-                .execute();
+        this.spotifyApi.addItemsToPlaylist(playlist.getId(), jsonArray).build().execute();
     }
 
-
-    private static <T> void inChunks(List<T> elements, Integer chunkSize, ChunkConsumer<List<T>> chunkConsumer) throws IOException, ParseException, SpotifyWebApiException {
+    private static <T> void inChunks(List<T> elements, Integer chunkSize, ChunkConsumer<List<T>> chunkConsumer)
+            throws IOException, ParseException, SpotifyWebApiException {
         if (elements.isEmpty()) {
             return;
         }

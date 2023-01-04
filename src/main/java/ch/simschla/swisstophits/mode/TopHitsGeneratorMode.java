@@ -7,8 +7,7 @@ public class TopHitsGeneratorMode {
 
     public static final TopHitsGeneratorMode INSTANCE = new TopHitsGeneratorMode();
 
-    private TopHitsGeneratorMode() {
-    }
+    private TopHitsGeneratorMode() {}
 
     boolean isDryRunEnabled = Boolean.parseBoolean(System.getProperty("dryRun", "true"));
 

@@ -5,12 +5,11 @@ import ch.simschla.swisstophits.scraper.pages.PageObject;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlDivision;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import lombok.NonNull;
-
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+import lombok.NonNull;
 
 public class Top50Page implements PageObject {
 
@@ -44,10 +43,8 @@ public class Top50Page implements PageObject {
     }
 
     public List<Top50ChartsElement> getChartsElements() {
-        return page.<HtmlDivision>getByXPath("//div[@class='main']/div[@class='content']")
-                .stream()
+        return page.<HtmlDivision>getByXPath("//div[@class='main']/div[@class='content']").stream()
                 .map(div -> Top50ChartsElement.onPage(this, div))
                 .toList();
     }
-
 }

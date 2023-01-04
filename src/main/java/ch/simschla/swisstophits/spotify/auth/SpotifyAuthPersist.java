@@ -1,12 +1,11 @@
 package ch.simschla.swisstophits.spotify.auth;
 
-import lombok.experimental.FieldNameConstants;
-
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.Properties;
+import lombok.experimental.FieldNameConstants;
 
 @FieldNameConstants
 public class SpotifyAuthPersist {
@@ -17,8 +16,7 @@ public class SpotifyAuthPersist {
 
     private String refreshToken;
 
-    private SpotifyAuthPersist() {
-    }
+    private SpotifyAuthPersist() {}
 
     public String accessToken() {
         return accessToken;
@@ -33,7 +31,9 @@ public class SpotifyAuthPersist {
     }
 
     public boolean hasValidAccessToken() {
-        return this.accessToken != null && this.accessTokenValidTo != null && this.accessTokenValidTo.isAfter(LocalDateTime.now());
+        return this.accessToken != null
+                && this.accessTokenValidTo != null
+                && this.accessTokenValidTo.isAfter(LocalDateTime.now());
     }
 
     public LocalDateTime authTokenValidTo() {
@@ -64,13 +64,13 @@ public class SpotifyAuthPersist {
         }
     }
 
-
     // ---- persisting
 
     private synchronized void save() {
         Properties props = new Properties(4);
         saveOrRemove(props, Fields.accessToken, accessToken);
-        saveOrRemove(props, Fields.accessTokenValidTo, accessTokenValidTo != null ? accessTokenValidTo.toString() : null);
+        saveOrRemove(
+                props, Fields.accessTokenValidTo, accessTokenValidTo != null ? accessTokenValidTo.toString() : null);
         saveOrRemove(props, Fields.refreshToken, refreshToken);
         try (OutputStream out = new FileOutputStream("spotify.auth")) {
             props.storeToXML(out, "SpotifyAuthTokens", StandardCharsets.UTF_8);
@@ -115,5 +115,4 @@ public class SpotifyAuthPersist {
         spotifyAuthPersist.load();
         return spotifyAuthPersist;
     }
-
 }

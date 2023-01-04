@@ -1,13 +1,12 @@
 package ch.simschla.swisstophits.spotify;
 
+import java.util.Collection;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.Setter;
 import se.michaelthelin.spotify.model_objects.specification.Track;
-
-import java.util.Collection;
-import java.util.stream.Stream;
 
 @Data
 class SongRating {
@@ -63,8 +62,8 @@ class SongRating {
                         getRankingScore(),
                         getReleaseDateScore(),
                         getDurationScore(),
-                        getTrackNumberScore()
-                ).reduce(Double::sum)
+                        getTrackNumberScore())
+                .reduce(Double::sum)
                 .orElseThrow();
     }
 }

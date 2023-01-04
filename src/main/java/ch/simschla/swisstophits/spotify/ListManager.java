@@ -2,6 +2,9 @@ package ch.simschla.swisstophits.spotify;
 
 import ch.simschla.swisstophits.mode.TopHitsGeneratorMode;
 import com.neovisionaries.i18n.CountryCode;
+import java.io.IOException;
+import java.util.*;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
@@ -15,20 +18,20 @@ import se.michaelthelin.spotify.model_objects.specification.Playlist;
 import se.michaelthelin.spotify.model_objects.specification.PlaylistSimplified;
 import se.michaelthelin.spotify.model_objects.specification.User;
 
-import java.io.IOException;
-import java.util.*;
-import java.util.regex.Pattern;
-
 public class ListManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ListManager.class);
 
     public static final String TARGET_LIST_NAME_PREFIX = "Top Hits Schweiz";
 
-    public static final Pattern TARGET_LIST_NAME_PATTERN = Pattern.compile("^\\Q" + TARGET_LIST_NAME_PREFIX + "\\E (196[89]|19[789]\\d|20\\d\\d)$");
+    public static final Pattern TARGET_LIST_NAME_PATTERN =
+            Pattern.compile("^\\Q" + TARGET_LIST_NAME_PREFIX + "\\E (196[89]|19[789]\\d|20\\d\\d)$");
 
-    public static final String TARGET_LIST_DESCRIPTION_PREFIX = "Die grössten Hits der Schweizer Hitparade aus dem Jahr";
-    public static final String TARGET_LIST_DESCRIPTION_SUFFIX = "(Credits: Daten von hitparade.ch, Cover via spotlistr.com, Foto von XY)";
+    public static final String TARGET_LIST_DESCRIPTION_PREFIX =
+            "Die grössten Hits der Schweizer Hitparade aus dem Jahr";
+    public static final String TARGET_LIST_DESCRIPTION_SUFFIX =
+            "(Credits: Daten von hitparade.ch, Cover via spotlistr.com, Foto von XY)";
+
     @NonNull
     private final SpotifyApi spotifyApi;
 
@@ -44,13 +47,18 @@ public class ListManager {
 
     public Optional<Playlist> fetchPlaylist(@NonNull Integer year) {
         Pattern patternForYear = patternForYear(year);
-        return getPlaylists().stream().filter(playlists -> patternForYear.matcher(playlists.getName()).matches()).findFirst();
+        return getPlaylists().stream()
+                .filter(playlists -> patternForYear.matcher(playlists.getName()).matches())
+                .findFirst();
     }
 
     public Playlist createPlaylist(@NonNull Integer year) {
         if (TopHitsGeneratorMode.INSTANCE.isDryRunEnabled()) {
             LOGGER.info("DRY-RUN. Not creating playlist {}", year);
-            return new Playlist.Builder().setId(UUID.randomUUID().toString()).setName(nameForYear(year)).build();
+            return new Playlist.Builder()
+                    .setId(UUID.randomUUID().toString())
+                    .setName(nameForYear(year))
+                    .build();
         }
         final String targetListName = nameForYear(year);
         if (fetchPlaylist(year).isPresent()) {
@@ -58,7 +66,8 @@ public class ListManager {
         }
 
         try {
-            Playlist playlist = this.spotifyApi.createPlaylist(getCurrentUser().getId(), targetListName)
+            Playlist playlist = this.spotifyApi
+                    .createPlaylist(getCurrentUser().getId(), targetListName)
                     .description(descriptionForYear(year))
                     .collaborative(false)
                     .public_(true)
@@ -71,7 +80,6 @@ public class ListManager {
         } catch (IOException | SpotifyWebApiException | ParseException | InterruptedException e) {
             throw new SpotifyException(e);
         }
-
     }
 
     private List<Playlist> fetchAllExistingLists() {
@@ -81,14 +89,13 @@ public class ListManager {
             Paging<PlaylistSimplified> lastResult;
             int offset = 0;
             do {
-                lastResult = this.spotifyApi.getListOfCurrentUsersPlaylists()
+                lastResult = this.spotifyApi
+                        .getListOfCurrentUsersPlaylists()
                         .limit(50)
                         .offset(offset)
                         .build()
                         .execute();
-                Arrays.stream(lastResult.getItems())
-                        .map(this::fetchPlaylist)
-                        .forEachOrdered(playlists::add);
+                Arrays.stream(lastResult.getItems()).map(this::fetchPlaylist).forEachOrdered(playlists::add);
                 offset += fetchSize;
             } while (lastResult.getNext() != null);
             return playlists;
@@ -99,7 +106,8 @@ public class ListManager {
 
     private Playlist fetchPlaylist(@NonNull PlaylistSimplified simplified) {
         try {
-            return this.spotifyApi.getPlaylist(simplified.getId())
+            return this.spotifyApi
+                    .getPlaylist(simplified.getId())
                     .market(CountryCode.CH)
                     .build()
                     .execute();
@@ -116,11 +124,9 @@ public class ListManager {
         }
     }
 
-
     private boolean isMatchingNamePattern(PlaylistSimplified playlist) {
         return TARGET_LIST_NAME_PATTERN.matcher(playlist.getName()).matches();
     }
-
 
     private static Pattern patternForYear(@NonNull Integer year) {
         return Pattern.compile("^\\Q" + TARGET_LIST_NAME_PREFIX + "\\E " + year + "$");

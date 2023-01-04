@@ -14,7 +14,8 @@ public class TopHitsGeneratorException extends RuntimeException {
         super(cause);
     }
 
-    public TopHitsGeneratorException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+    public TopHitsGeneratorException(
+            String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }
