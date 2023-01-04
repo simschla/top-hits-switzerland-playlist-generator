@@ -1,7 +1,7 @@
 package ch.simschla.swisstophits.spotify;
 
 import ch.simschla.swisstophits.model.SongInfo;
-import ch.simschla.swisstophits.spotify.SongSearchResult.SongMatchPriority;
+import ch.simschla.swisstophits.spotify.SongSearchResultProvider.SongMatchPriority;
 import com.neovisionaries.i18n.CountryCode;
 import java.io.IOException;
 import java.text.Normalizer;
@@ -33,61 +33,70 @@ public class SongSearcher {
         this.spotifyApi = spotifyApi;
     }
 
-    public SongSearchResult search(@NonNull SongInfo songInfo) {
-        SongSearchResult searchResult = new SongSearchResult();
+    public SongSearchResultProvider search(@NonNull SongInfo songInfo) {
+        SongSearchResultProvider searchResult = new SongSearchResultProvider();
         // EXACT_MATCH
         final String searchString = searchString(songInfo);
-        LOGGER.info("({}) Searching with '{}' for {}", songInfo.getPosition(), searchString, songInfo.toShortDesc());
-        searchResult.add(SongMatchPriority.EXACT_MATCH, search(searchString));
+        searchResult.add(SongMatchPriority.EXACT_MATCH, () -> {
+            LOGGER.info(
+                    "({}) Searching with '{}' for {}", songInfo.getPosition(), searchString, songInfo.toShortDesc());
+            return search(searchString);
+        });
 
         // MATCH_WITHOUT_ARTIST_TAGS
         final String searchStringWithoutArtistTags = searchStringWithoutArtistTags(songInfo);
-        LOGGER.info(
-                "({}) Searching with '{}' for {}",
-                songInfo.getPosition(),
-                searchStringWithoutArtistTags,
-                songInfo.toShortDesc());
-        searchResult.add(SongMatchPriority.MATCH_WITHOUT_ARTIST_TAGS, search(searchStringWithoutArtistTags));
+        searchResult.add(SongMatchPriority.MATCH_WITHOUT_ARTIST_TAGS, () -> {
+            LOGGER.info(
+                    "({}) Searching with '{}' for {}",
+                    songInfo.getPosition(),
+                    searchStringWithoutArtistTags,
+                    songInfo.toShortDesc());
+            return search(searchStringWithoutArtistTags);
+        });
 
         // MATCH_WITHOUT_YEAR_TAG
         final String searchStringWithoutYearTag = searchStringWithoutYearTag(songInfo);
-        LOGGER.info(
-                "({}) Searching with '{}' for {}",
-                songInfo.getPosition(),
-                searchStringWithoutYearTag,
-                songInfo.toShortDesc());
-        searchResult.add(SongMatchPriority.MATCH_WITHOUT_YEAR_TAG, search(searchStringWithoutYearTag));
+        searchResult.add(SongMatchPriority.MATCH_WITHOUT_YEAR_TAG, () -> {
+            LOGGER.info(
+                    "({}) Searching with '{}' for {}",
+                    songInfo.getPosition(),
+                    searchStringWithoutYearTag,
+                    songInfo.toShortDesc());
+            return search(searchStringWithoutYearTag);
+        });
 
         // MATCH_WITHOUT_YEAR_AND_ARTIST_TAGS
         final String searchStringWithoutYearAndArtistTags = searchStringWithoutYearAndArtistTags(songInfo);
-        LOGGER.info(
-                "({}) Searching with '{}' for {}",
-                songInfo.getPosition(),
-                searchStringWithoutYearAndArtistTags,
-                songInfo.toShortDesc());
-        searchResult.add(
-                SongMatchPriority.MATCH_WITHOUT_YEAR_AND_ARTIST_TAGS, search(searchStringWithoutYearAndArtistTags));
+        searchResult.add(SongMatchPriority.MATCH_WITHOUT_YEAR_AND_ARTIST_TAGS, () -> {
+            LOGGER.info(
+                    "({}) Searching with '{}' for {}",
+                    songInfo.getPosition(),
+                    searchStringWithoutYearAndArtistTags,
+                    songInfo.toShortDesc());
+            return search(searchStringWithoutYearAndArtistTags);
+        });
 
         // MATCH_WITHOUT_TRACK_AND_ARTIST_TAGS
         final String searchStringWithoutTrackAndArtistTags = searchStringWithoutTrackAndArtistTags(songInfo);
-        LOGGER.info(
-                "({}) Searching with '{}' for {}",
-                songInfo.getPosition(),
-                searchStringWithoutTrackAndArtistTags,
-                songInfo.toShortDesc());
-        searchResult.add(
-                SongMatchPriority.MATCH_WITHOUT_TRACK_AND_ARTIST_TAGS, search(searchStringWithoutTrackAndArtistTags));
+        searchResult.add(SongMatchPriority.MATCH_WITHOUT_TRACK_AND_ARTIST_TAGS, () -> {
+            LOGGER.info(
+                    "({}) Searching with '{}' for {}",
+                    songInfo.getPosition(),
+                    searchStringWithoutTrackAndArtistTags,
+                    songInfo.toShortDesc());
+            return search(searchStringWithoutTrackAndArtistTags);
+        });
 
         // MATCH_WITHOUT_TAGS
         final String searchStringWithoutTags = searchStringWithoutTags(songInfo);
-        LOGGER.info(
-                "({}) Searching with '{}' for {}",
-                songInfo.getPosition(),
-                searchStringWithoutTags,
-                songInfo.toShortDesc());
-        searchResult.add(SongMatchPriority.MATCH_WITHOUT_TAGS, search(searchStringWithoutTags));
-
-        LOGGER.debug("({}) Found results for {}: {}", songInfo.getPosition(), songInfo.toShortDesc(), searchResult.getTrackCountPerPriorityString());
+        searchResult.add(SongMatchPriority.MATCH_WITHOUT_TAGS, () -> {
+            LOGGER.info(
+                    "({}) Searching with '{}' for {}",
+                    songInfo.getPosition(),
+                    searchStringWithoutTags,
+                    songInfo.toShortDesc());
+            return search(searchStringWithoutTags);
+        });
 
         return searchResult;
     }

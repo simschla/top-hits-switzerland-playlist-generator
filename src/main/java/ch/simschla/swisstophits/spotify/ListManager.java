@@ -136,7 +136,7 @@ public class ListManager {
         return Pattern.compile("^\\Q" + TARGET_LIST_NAME_PREFIX + "\\E " + year + "$");
     }
 
-    private static String nameForYear(@NonNull Integer year) {
+    public static String nameForYear(@NonNull Integer year) {
         return TARGET_LIST_NAME_PREFIX + " " + year;
     }
 

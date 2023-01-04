@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 import lombok.NonNull;
 import org.apache.hc.core5.http.ParseException;
 import org.slf4j.Logger;
@@ -90,12 +89,7 @@ public class SongManager {
         for (SongInfo chartSong : chartInfo.getChartSongs()) {
             LOGGER.debug("Searching for song: {}", chartSong);
 
-            SongSearchResult tracks = searcher.search(chartSong);
-            if (tracks.isEmpty()) {
-                LOGGER.warn("Could not find any track matching {} -- skipping.", chartSong);
-                foundTracks.add(null);
-                continue;
-            }
+            SongSearchResultProvider tracks = searcher.search(chartSong);
 
             final Optional<Track> track = selectTrack(chartSong, tracks);
             if (track.isEmpty()) {
@@ -104,11 +98,6 @@ public class SongManager {
                 continue;
             }
             LOGGER.debug("Using {} for {}.", track.get(), chartSong);
-//            LOGGER.debug(
-//                    "First 5 per priority: {}",
-//                    tracks.subList(0, Math.min(5, tracks.size())).stream()
-//                            .map(t -> "\n- " + t)
-//                            .collect(Collectors.joining("\n")));
             foundTracks.add(track.get());
         }
     }
@@ -131,7 +120,7 @@ public class SongManager {
     }
 
     @NonNull
-    private Optional<Track> selectTrack(SongInfo chartSong, SongSearchResult tracks) {
+    private Optional<Track> selectTrack(SongInfo chartSong, SongSearchResultProvider tracks) {
         SongMatcher songMatcher = new SongMatcher(chartSong);
         return tracks.resultStream()
                 .map(songMatcher::selectBestMatchingTrack)

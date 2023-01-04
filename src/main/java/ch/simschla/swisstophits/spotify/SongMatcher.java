@@ -33,27 +33,16 @@ public class SongMatcher {
     }
 
     public Optional<Track> selectBestMatchingTrack(List<Track> tracks) {
-
+        if (tracks.isEmpty()) {
+            return Optional.empty();
+        }
         RatingCalculator ratingCalculator = new RatingCalculator(tracks);
         List<SongRating> ratings = ratingCalculator.sortedRatings(22d);
         if (ratings.isEmpty()) {
-            LOGGER.info(
-                    "--> no match in limit. Max 5: {}",
-                    ratingCalculator.sortedRatings(0d).stream()
-                            .limit(5)
-                            .map(Object::toString)
-                            .collect(Collectors.joining("\n\n")));
+            LOGGER.debug("--> no match in limit.");
             return Optional.empty();
         }
-        LOGGER.info("Rating of {} for {}.", ratings.get(0), songToLookFor.toShortDesc());
-        if (songToLookFor.getSong().equals("Jenny From The Block")) {
-            LOGGER.info(
-                    "--> First 10 were: {}",
-                    ratingCalculator.sortedRatings(0d).stream()
-                            .limit(10)
-                            .map(Object::toString)
-                            .collect(Collectors.joining("\n\n")));
-        }
+        LOGGER.info("Found match for {}. Rating: {}", songToLookFor.toShortDesc(), ratings.get(0));
         LOGGER.debug(
                 "--> First 5 were: {}",
                 ratingCalculator.sortedRatings(0d).stream()
