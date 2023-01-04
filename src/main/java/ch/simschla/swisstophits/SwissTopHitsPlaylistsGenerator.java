@@ -1,5 +1,8 @@
 package ch.simschla.swisstophits;
 
+import static ch.simschla.swisstophits.spotify.ListManager.nameForYear;
+
+import ch.simschla.swisstophits.mode.TopHitsGeneratorMode;
 import ch.simschla.swisstophits.model.ChartInfo;
 import ch.simschla.swisstophits.normalizer.SongInfoNormalizer;
 import ch.simschla.swisstophits.scraper.ChartSongsScraper;
@@ -10,6 +13,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import lombok.AccessLevel;
@@ -85,8 +89,17 @@ public class SwissTopHitsPlaylistsGenerator {
 
         // assert list
         LOGGER.info("{} - asserting playlist exists", year);
-        ListManager listManager = new ListManager(spotifyApi);
-        Playlist playlist = listManager.fetchPlaylist(year).orElseGet(() -> listManager.createPlaylist(year));
+        Playlist playlist;
+        if (TopHitsGeneratorMode.INSTANCE.isDryRunEnabled()) {
+            LOGGER.info("DRY-RUN. Not fetching playlist {}", year);
+            playlist = new Playlist.Builder()
+                    .setId(UUID.randomUUID().toString())
+                    .setName(nameForYear(year))
+                    .build();
+        } else {
+            ListManager listManager = new ListManager(spotifyApi);
+            playlist = listManager.fetchPlaylist(year).orElseGet(() -> listManager.createPlaylist(year));
+        }
 
         // add songs
         LOGGER.info("{} - searching songs and updating playlist if needed", year);
