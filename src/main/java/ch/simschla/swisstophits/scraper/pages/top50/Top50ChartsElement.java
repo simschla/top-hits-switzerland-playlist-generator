@@ -52,7 +52,7 @@ public class Top50ChartsElement implements PageObjectElement {
     }
 
     private Collection<String> parseArtists(String artistsText) {
-        return Arrays.stream(artistsText.split(", | & | \\+ | / | feat. | featuring | Feat. | Featuring | and | und "))
+        return Arrays.stream(artistsText.split(",\\s|\\s&\\s|\\s\\+\\s| / | feat. | featuring | Feat. | Featuring | and | und |\\sx\\s"))
                 .filter(Objects::nonNull)
                 .map(String::trim)
                 .map(s -> s.length() == 0 ? null : s)
